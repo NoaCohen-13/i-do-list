@@ -3,8 +3,9 @@
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { todos, guests, budgetItems } from "@/db/schema";
+import { todos, guests, budgetItems, weddings } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
+import { extractSheetId, syncWeddingFromGoogleSheet } from "@/lib/google-sheet-sync";
 
 export async function toggleTodo(id: string, done: boolean) {
   const wedding = await requireWedding();
@@ -98,4 +99,39 @@ export async function deleteBudgetItem(id: string) {
   await db.delete(budgetItems).where(and(eq(budgetItems.id, id), eq(budgetItems.weddingId, wedding.id)));
   revalidatePath("/budget");
   revalidatePath("/");
+}
+
+export async function updateWeddingSettings(formData: FormData) {
+  const wedding = await requireWedding();
+  const db = getDb();
+
+  const weddingDate = String(formData.get("weddingDate") || "") || null;
+  const venueName = String(formData.get("venueName") || "").trim() || null;
+  const sheetUrl = String(formData.get("sheetUrl") || "").trim();
+  const guestsTab = String(formData.get("guestsTab") || "").trim() || null;
+  const budgetTab = String(formData.get("budgetTab") || "").trim() || null;
+
+  const googleSheetId = sheetUrl ? extractSheetId(sheetUrl) : null;
+
+  await db
+    .update(weddings)
+    .set({
+      weddingDate,
+      venueName,
+      googleSheetId,
+      googleSheetGuestsTab: guestsTab,
+      googleSheetBudgetTab: budgetTab,
+    })
+    .where(eq(weddings.id, wedding.id));
+
+  revalidatePath("/", "layout");
+}
+
+export async function syncNow() {
+  const wedding = await requireWedding();
+  const result = await syncWeddingFromGoogleSheet(wedding.id);
+  revalidatePath("/guests");
+  revalidatePath("/budget");
+  revalidatePath("/");
+  return result;
 }

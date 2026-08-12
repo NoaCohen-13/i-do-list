@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { href: "/guests", label: "Guests" },
   { href: "/budget", label: "Budget" },
   { href: "/todos", label: "To-Dos" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function AppShell({
