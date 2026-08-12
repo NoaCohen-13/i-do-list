@@ -93,6 +93,18 @@ export async function createBudgetItem(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function toggleBudgetItemBooked(id: string, booked: boolean) {
+  const wedding = await requireWedding();
+  const db = getDb();
+  await db
+    .update(budgetItems)
+    .set({ booked, updatedAt: new Date() })
+    .where(and(eq(budgetItems.id, id), eq(budgetItems.weddingId, wedding.id)));
+  revalidatePath("/budget");
+  revalidatePath("/todos");
+  revalidatePath("/");
+}
+
 export async function deleteBudgetItem(id: string) {
   const wedding = await requireWedding();
   const db = getDb();

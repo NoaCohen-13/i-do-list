@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "@/db";
-import { todos } from "@/db/schema";
+import { todos, budgetItems } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createTodo, deleteTodo } from "@/app/(app)/actions";
-import { TodoCheckbox } from "@/components/TodoCheckbox";
+import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
 
 export default async function TodosPage() {
   const wedding = await requireWedding();
@@ -13,6 +13,11 @@ export default async function TodosPage() {
   const allTodos = await db.query.todos.findMany({
     where: eq(todos.weddingId, wedding.id),
     orderBy: (t, { asc }) => [asc(t.dueDate), asc(t.createdAt)],
+  });
+
+  const unbookedVendors = await db.query.budgetItems.findMany({
+    where: and(eq(budgetItems.weddingId, wedding.id), eq(budgetItems.booked, false)),
+    orderBy: (b, { asc }) => [asc(b.category)],
   });
 
   const phases = new Map<string, typeof allTodos>();
@@ -33,8 +38,30 @@ export default async function TodosPage() {
         <h1 className="text-3xl">Organized by when it&apos;s due</h1>
         <p className="mt-2 text-text-muted">
           {allTodos.length} tasks · {done} done
+          {unbookedVendors.length > 0 && ` · ${unbookedVendors.length} vendors still to book`}
         </p>
       </header>
+
+      {unbookedVendors.length > 0 && (
+        <div className="mb-7 overflow-hidden rounded-[22px] border border-border bg-surface">
+          <div className="flex items-center justify-between border-b border-border bg-coral-soft px-5 py-4">
+            <h3 className="text-[1.05rem]">Vendors to book</h3>
+            <span className="text-[0.78rem] font-bold text-coral-strong">from your budget</span>
+          </div>
+          {unbookedVendors.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
+              <BudgetBookedCheckbox id={item.id} booked={item.booked} />
+              <div className="flex-1 text-[0.92rem] font-semibold">
+                {item.itemName}
+                {item.vendorName && <span className="font-normal text-text-muted"> · {item.vendorName}</span>}
+              </div>
+              <span className="rounded-full bg-melon-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-melon-strong">
+                {item.category}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <form
         action={createTodo}

@@ -1,10 +1,10 @@
-import { sql, eq, asc } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import { getDb } from "@/db";
 import { guests, budgetItems, todos } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { StatCard, Ring } from "@/components/StatCard";
-import { TodoCheckbox } from "@/components/TodoCheckbox";
+import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
 
 function formatDate(d: string) {
   return new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
@@ -27,6 +27,17 @@ export default async function DashboardPage() {
     .from(todos)
     .where(eq(todos.weddingId, wedding.id));
 
+  const [vendorStats] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      done: sql<number>`count(*) filter (where ${budgetItems.booked})::int`,
+    })
+    .from(budgetItems)
+    .where(eq(budgetItems.weddingId, wedding.id));
+
+  const combinedTotal = todoStats.total + vendorStats.total;
+  const combinedDone = todoStats.done + vendorStats.done;
+
   const [guestStats] = await db
     .select({
       households: sql<number>`count(*)::int`,
@@ -43,13 +54,22 @@ export default async function DashboardPage() {
     .from(budgetItems)
     .where(eq(budgetItems.weddingId, wedding.id));
 
-  const upNext = await db.query.todos.findMany({
-    where: (t, { eq, and, or }) => and(eq(t.weddingId, wedding.id), or(eq(t.done, false))),
+  const upNextTodos = await db.query.todos.findMany({
+    where: and(eq(todos.weddingId, wedding.id), eq(todos.done, false)),
     orderBy: (t, { asc }) => [asc(t.dueDate), asc(t.createdAt)],
     limit: 5,
   });
+  const upNextVendors = await db.query.budgetItems.findMany({
+    where: and(eq(budgetItems.weddingId, wedding.id), eq(budgetItems.booked, false)),
+    orderBy: (b, { asc }) => [asc(b.category)],
+    limit: 5,
+  });
+  const upNext = [
+    ...upNextTodos.map((t) => ({ kind: "todo" as const, id: t.id, title: t.title, tag: t.category, done: t.done })),
+    ...upNextVendors.map((v) => ({ kind: "vendor" as const, id: v.id, title: v.itemName, tag: v.category, done: v.booked })),
+  ].slice(0, 5);
 
-  const todoPct = todoStats.total > 0 ? todoStats.done / todoStats.total : 0;
+  const todoPct = combinedTotal > 0 ? combinedDone / combinedTotal : 0;
   const committed = Number(budgetStats.committed);
   const paid = Number(budgetStats.paid);
   const budgetPct = committed > 0 ? paid / committed : 0;
@@ -128,11 +148,15 @@ export default async function DashboardPage() {
                 key={t.id}
                 className="flex items-center gap-3.5 border-b border-border px-4.5 py-3.5 last:border-b-0"
               >
-                <TodoCheckbox id={t.id} done={t.done} />
+                {t.kind === "todo" ? (
+                  <TodoCheckbox id={t.id} done={t.done} />
+                ) : (
+                  <BudgetBookedCheckbox id={t.id} booked={t.done} />
+                )}
                 <div className="flex-1 font-bold">{t.title}</div>
-                {t.category && (
+                {t.tag && (
                   <span className="rounded-full bg-coral-soft px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-coral-strong">
-                    {t.category}
+                    {t.tag}
                   </span>
                 )}
               </div>

@@ -31,6 +31,10 @@ export const weddings = pgTable("weddings", {
   googleSheetGuestsTab: text("google_sheet_guests_tab"),
   googleSheetBudgetTab: text("google_sheet_budget_tab"),
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  icalUrl: text("ical_url"),
+  lastCalendarSyncedAt: timestamp("last_calendar_synced_at", { withTimezone: true }),
+  reminderEmails: text("reminder_emails"),
+  reminderDaysBefore: integer("reminder_days_before").notNull().default(3),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -64,6 +68,7 @@ export const budgetItems = pgTable("budget_items", {
   contactPhone: text("contact_phone"),
   committedCost: numeric("committed_cost", { precision: 12, scale: 2 }).notNull().default("0"),
   paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  booked: boolean("booked").notNull().default(false),
   notes: text("notes"),
   source: recordSourceEnum("source").notNull().default("manual"),
   externalRowKey: text("external_row_key"),
@@ -82,6 +87,22 @@ export const todos = pgTable("todos", {
   done: boolean("done").notNull().default(false),
   assignee: text("assignee"),
   dueDate: date("due_date"),
+  reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const calendarEvents = pgTable("calendar_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  weddingId: uuid("wedding_id")
+    .notNull()
+    .references(() => weddings.id, { onDelete: "cascade" }),
+  uid: text("uid").notNull(),
+  title: text("title").notNull(),
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  location: text("location"),
+  notes: text("notes"),
+  reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -4,6 +4,7 @@ import { budgetItems } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createBudgetItem, deleteBudgetItem } from "@/app/(app)/actions";
+import { BudgetBookedCheckbox } from "@/components/TodoCheckbox";
 
 export default async function BudgetPage() {
   const wedding = await requireWedding();
@@ -109,10 +110,11 @@ export default async function BudgetPage() {
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
                   <div className="h-full rounded-full bg-coral" style={{ width: `${Math.min(100, catPct * 100)}%` }} />
                 </div>
-                <ul className="mt-3 space-y-1.5">
+                <ul className="mt-3 space-y-2">
                   {bucket.items.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between text-sm">
-                      <span>
+                    <li key={item.id} className="flex items-center gap-2 text-sm">
+                      <BudgetBookedCheckbox id={item.id} booked={item.booked} />
+                      <span className={`flex-1 ${item.booked ? "text-text-muted line-through" : ""}`}>
                         {item.itemName}
                         {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
                       </span>

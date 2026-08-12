@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toggleTodo } from "@/app/(app)/actions";
 
 const CONFETTI_COLORS = ["#EF4B6E", "#FF8360", "#7A1F4B", "#3E9C90"];
 
-export function TodoCheckbox({ id, done }: { id: string; done: boolean }) {
+export function Checkbox({
+  done,
+  onToggle,
+}: {
+  done: boolean;
+  onToggle: (next: boolean) => void | Promise<void>;
+}) {
   const [optimisticDone, setOptimisticDone] = useState(done);
   const [burstKey, setBurstKey] = useState(0);
   const [, startTransition] = useTransition();
@@ -18,7 +23,7 @@ export function TodoCheckbox({ id, done }: { id: string; done: boolean }) {
     setOptimisticDone(next);
     if (next && !reduceMotion) setBurstKey((k) => k + 1);
     startTransition(() => {
-      toggleTodo(id, next);
+      onToggle(next);
     });
   }
 
@@ -60,5 +65,29 @@ export function TodoCheckbox({ id, done }: { id: string; done: boolean }) {
         </span>
       )}
     </button>
+  );
+}
+
+export function TodoCheckbox({ id, done }: { id: string; done: boolean }) {
+  return (
+    <Checkbox
+      done={done}
+      onToggle={async (next) => {
+        const { toggleTodo } = await import("@/app/(app)/actions");
+        toggleTodo(id, next);
+      }}
+    />
+  );
+}
+
+export function BudgetBookedCheckbox({ id, booked }: { id: string; booked: boolean }) {
+  return (
+    <Checkbox
+      done={booked}
+      onToggle={async (next) => {
+        const { toggleBudgetItemBooked } = await import("@/app/(app)/actions");
+        toggleBudgetItemBooked(id, next);
+      }}
+    />
   );
 }

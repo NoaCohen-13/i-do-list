@@ -54,7 +54,11 @@ export function parseGuestRows(rows: string[][]): ParsedGuestRow[] {
       partySize,
       groupName: currentGroup,
       notes: notes || null,
-      rowKey: `guest:${i}:${name}`,
+      // Keyed by content (group + name), not row position — spreadsheet
+      // rows shift as people edit, but the same household should always
+      // resolve to the same record so syncs update in place instead of
+      // duplicating.
+      rowKey: `guest:${(currentGroup ?? "").trim()}:${name}`,
     });
   }
 
@@ -109,7 +113,9 @@ export function parseBudgetRows(rows: string[][]): ParsedBudgetRow[] {
       committedCost: parseMoney(row[5]),
       paidAmount: parseMoney(row[6]),
       notes: (row[9] ?? "").trim() || null,
-      rowKey: `budget:${i}:${itemName}`,
+      // Keyed by content (category + item), not row position — see the
+      // matching comment in parseGuestRows for why.
+      rowKey: `budget:${currentCategory}:${itemName}`,
     });
   }
 
