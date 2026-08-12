@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const fredoka = localFont({
@@ -25,8 +26,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${fredoka.variable} ${poppins.variable} h-full`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
-    </html>
+    <ClerkProvider taskUrls={{ "choose-organization": "/session-tasks/choose-organization" }}>
+      <html lang="en" className={`${fredoka.variable} ${poppins.variable} h-full`} suppressHydrationWarning>
+        <body className="min-h-full flex flex-col antialiased">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }
