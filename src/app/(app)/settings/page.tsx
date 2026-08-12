@@ -2,6 +2,7 @@ import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { updateWeddingSettings } from "@/app/(app)/actions";
 import { SyncButton } from "@/components/SyncButton";
+import { ImportForm } from "@/components/ImportForm";
 
 export default async function SettingsPage() {
   const wedding = await requireWedding();
@@ -61,7 +62,7 @@ export default async function SettingsPage() {
       </form>
 
       {wedding.googleSheetId && (
-        <div className="rounded-[22px] border border-border bg-surface p-6">
+        <div className="mb-9 rounded-[22px] border border-border bg-surface p-6">
           <h2 className="mb-1 text-lg">Sync</h2>
           <p className="mb-4 text-sm text-text-muted">
             {wedding.lastSyncedAt
@@ -72,6 +73,14 @@ export default async function SettingsPage() {
           <SyncButton />
         </div>
       )}
+
+      <div className="rounded-[22px] border border-border bg-surface p-6">
+        <h2 className="mb-1 text-lg">Import a spreadsheet</h2>
+        <p className="mb-4 text-sm text-text-muted">
+          One-time import from an Excel or CSV file — good if you&apos;re not using Google Sheets.
+        </p>
+        <ImportForm />
+      </div>
     </AppShell>
   );
 }

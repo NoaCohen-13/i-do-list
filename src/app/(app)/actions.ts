@@ -135,3 +135,66 @@ export async function syncNow() {
   revalidatePath("/");
   return result;
 }
+
+export async function importSpreadsheet(formData: FormData) {
+  const wedding = await requireWedding();
+  const db = getDb();
+  const file = formData.get("file") as File | null;
+  const kind = String(formData.get("kind") || "guests");
+  const sheetName = String(formData.get("sheetName") || "").trim() || null;
+
+  if (!file || file.size === 0) {
+    return { ok: false as const, error: "Choose a file first." };
+  }
+
+  const XLSX = await import("xlsx");
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const targetSheet = sheetName && workbook.SheetNames.includes(sheetName)
+    ? sheetName
+    : workbook.SheetNames[0];
+  const sheet = workbook.Sheets[targetSheet];
+  const rows: string[][] = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    raw: false,
+    defval: "",
+  });
+
+  if (kind === "guests") {
+    const { parseGuestRows } = await import("@/lib/sheet-parse");
+    const parsed = parseGuestRows(rows);
+    for (const g of parsed) {
+      await db.insert(guests).values({
+        weddingId: wedding.id,
+        householdName: g.householdName,
+        partySize: g.partySize,
+        groupName: g.groupName,
+        notes: g.notes,
+        source: "import",
+      });
+    }
+    revalidatePath("/guests");
+    revalidatePath("/");
+    return { ok: true as const, count: parsed.length, sheetName: targetSheet };
+  } else {
+    const { parseBudgetRows } = await import("@/lib/sheet-parse");
+    const parsed = parseBudgetRows(rows);
+    for (const b of parsed) {
+      await db.insert(budgetItems).values({
+        weddingId: wedding.id,
+        category: b.category,
+        itemName: b.itemName,
+        vendorName: b.vendorName,
+        contactName: b.contactName,
+        contactPhone: b.contactPhone,
+        committedCost: String(b.committedCost),
+        paidAmount: String(b.paidAmount),
+        notes: b.notes,
+        source: "import",
+      });
+    }
+    revalidatePath("/budget");
+    revalidatePath("/");
+    return { ok: true as const, count: parsed.length, sheetName: targetSheet };
+  }
+}
