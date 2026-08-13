@@ -77,6 +77,10 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
       const existing = await db.query.budgetItems.findFirst({
         where: and(eq(budgetItems.weddingId, weddingId), eq(budgetItems.externalRowKey, b.rowKey)),
       });
+      // Any payment at all (even just a deposit) means the vendor is
+      // secured — auto-mark it booked. Never auto-unbook something that
+      // was already booked (e.g. manually, or paid then refunded on paper).
+      const autoBooked = b.paidAmount > 0;
       if (existing) {
         await db
           .update(budgetItems)
@@ -88,6 +92,7 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
             contactPhone: b.contactPhone,
             committedCost: String(b.committedCost),
             paidAmount: String(b.paidAmount),
+            booked: existing.booked || autoBooked,
             notes: b.notes,
             updatedAt: new Date(),
           })
@@ -102,6 +107,7 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
           contactPhone: b.contactPhone,
           committedCost: String(b.committedCost),
           paidAmount: String(b.paidAmount),
+          booked: autoBooked,
           notes: b.notes,
           source: "sheet_sync",
           externalRowKey: b.rowKey,

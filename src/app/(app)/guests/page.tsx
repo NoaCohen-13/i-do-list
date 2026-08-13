@@ -31,10 +31,13 @@ export default async function GuestsPage() {
     .groupBy(guests.groupName)
     .orderBy(sql`coalesce(sum(${guests.partySize}), 0) desc`);
 
+  const sumBy = (status: "confirmed" | "pending" | "declined") =>
+    allGuests.filter((g) => g.rsvpStatus === status).reduce((sum, g) => sum + g.partySize, 0);
+
   const totalGuests = allGuests.reduce((sum, g) => sum + g.partySize, 0);
-  const confirmed = allGuests.filter((g) => g.rsvpStatus === "confirmed").length;
-  const pending = allGuests.filter((g) => g.rsvpStatus === "pending").length;
-  const declined = allGuests.filter((g) => g.rsvpStatus === "declined").length;
+  const confirmed = sumBy("confirmed");
+  const pending = sumBy("pending");
+  const declined = sumBy("declined");
 
   return (
     <AppShell active="/guests">

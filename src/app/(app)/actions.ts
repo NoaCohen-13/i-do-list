@@ -81,13 +81,15 @@ export async function createBudgetItem(formData: FormData) {
   const db = getDb();
   const itemName = String(formData.get("itemName") || "").trim();
   if (!itemName) return;
+  const paidAmount = Number(formData.get("paidAmount") || 0);
   await db.insert(budgetItems).values({
     weddingId: wedding.id,
     category: String(formData.get("category") || "Other"),
     itemName,
     vendorName: String(formData.get("vendorName") || "") || null,
     committedCost: String(formData.get("committedCost") || "0"),
-    paidAmount: String(formData.get("paidAmount") || "0"),
+    paidAmount: String(paidAmount),
+    booked: paidAmount > 0,
   });
   revalidatePath("/budget");
   revalidatePath("/");
@@ -201,6 +203,7 @@ export async function importSpreadsheet(formData: FormData) {
         contactPhone: b.contactPhone,
         committedCost: String(b.committedCost),
         paidAmount: String(b.paidAmount),
+        booked: b.paidAmount > 0,
         notes: b.notes,
         source: "import",
       });

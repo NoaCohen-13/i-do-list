@@ -118,6 +118,11 @@ export default async function BudgetPage() {
                         {item.itemName}
                         {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
                       </span>
+                      <span className="tabular-nums text-text-muted whitespace-nowrap">
+                        {Number(item.committedCost) > 0
+                          ? `₪${Number(item.committedCost).toLocaleString()}`
+                          : "—"}
+                      </span>
                       <form action={deleteBudgetItem.bind(null, item.id)}>
                         <button type="submit" className="text-text-muted hover:text-berry-strong" aria-label="Remove item">
                           ✕
