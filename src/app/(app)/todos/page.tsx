@@ -15,19 +15,36 @@ export default async function TodosPage() {
     orderBy: (t, { asc }) => [asc(t.dueDate), asc(t.createdAt)],
   });
 
-  const unbookedVendors = await db.query.budgetItems.findMany({
-    where: and(eq(budgetItems.weddingId, wedding.id), eq(budgetItems.booked, false)),
+  const allVendors = await db.query.budgetItems.findMany({
+    where: eq(budgetItems.weddingId, wedding.id),
     orderBy: (b, { asc }) => [asc(b.category)],
   });
+  const unbookedVendors = allVendors.filter((v) => !v.booked);
 
+  const activeTodos = allTodos.filter((t) => !t.done);
   const phases = new Map<string, typeof allTodos>();
-  for (const t of allTodos) {
+  for (const t of activeTodos) {
     const key = t.phase ?? "Unsorted";
     const bucket = phases.get(key) ?? [];
     bucket.push(t);
     phases.set(key, bucket);
   }
   const done = allTodos.filter((t) => t.done).length;
+
+  type CompletedItem = { id: string; title: string; kind: "todo" | "vendor" };
+  const completedByCategory = new Map<string, CompletedItem[]>();
+  for (const t of allTodos.filter((t) => t.done)) {
+    const key = t.category ?? "Uncategorized";
+    const bucket = completedByCategory.get(key) ?? [];
+    bucket.push({ id: t.id, title: t.title, kind: "todo" });
+    completedByCategory.set(key, bucket);
+  }
+  for (const v of allVendors.filter((v) => v.booked)) {
+    const key = v.category;
+    const bucket = completedByCategory.get(key) ?? [];
+    bucket.push({ id: v.id, title: v.itemName, kind: "vendor" });
+    completedByCategory.set(key, bucket);
+  }
 
   return (
     <AppShell active="/todos">
@@ -116,6 +133,34 @@ export default async function TodosPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {completedByCategory.size > 0 && (
+        <section className="mt-9">
+          <h2 className="mb-3.5 text-xl">Completed ({done + allVendors.filter((v) => v.booked).length})</h2>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {[...completedByCategory.entries()].map(([category, items]) => (
+              <div key={category} className="overflow-hidden rounded-[22px] border border-border bg-surface">
+                <div className="flex items-center justify-between border-b border-border bg-surface-2 px-5 py-4">
+                  <h3 className="text-[1.05rem]">{category}</h3>
+                  <span className="text-[0.78rem] font-bold text-text-muted">{items.length} done</span>
+                </div>
+                {items.map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0">
+                    {item.kind === "todo" ? (
+                      <TodoCheckbox id={item.id} done={true} />
+                    ) : (
+                      <BudgetBookedCheckbox id={item.id} booked={true} />
+                    )}
+                    <div className="flex-1 text-[0.92rem] font-semibold text-text-muted line-through">
+                      {item.title}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
     </AppShell>
   );
