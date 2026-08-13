@@ -38,15 +38,19 @@ export async function sendDueReminders() {
     });
 
     for (const t of dueTodos) {
-      await sendReminderEmail(
-        to,
-        `Reminder: ${t.title}`,
-        `<p><strong>${t.title}</strong> is due ${t.dueDate}.</p>${
-          t.category ? `<p>Category: ${t.category}</p>` : ""
-        }<p>— I Do List</p>`
-      );
-      await db.update(todos).set({ reminderSentAt: new Date() }).where(eq(todos.id, t.id));
-      todoReminders++;
+      try {
+        await sendReminderEmail(
+          to,
+          `Reminder: ${t.title}`,
+          `<p><strong>${t.title}</strong> is due ${t.dueDate}.</p>${
+            t.category ? `<p>Category: ${t.category}</p>` : ""
+          }<p>— I Do List</p>`
+        );
+        await db.update(todos).set({ reminderSentAt: new Date() }).where(eq(todos.id, t.id));
+        todoReminders++;
+      } catch (err) {
+        console.error(`Failed to send reminder for todo ${t.id}:`, err);
+      }
     }
 
     const now = new Date();
@@ -60,18 +64,22 @@ export async function sendDueReminders() {
     });
 
     for (const e of dueEvents) {
-      await sendReminderEmail(
-        to,
-        `Upcoming: ${e.title}`,
-        `<p><strong>${e.title}</strong> is coming up on ${formatDate(new Date(e.startAt))}.</p>${
-          e.location ? `<p>Location: ${e.location}</p>` : ""
-        }${e.notes ? `<p>${e.notes}</p>` : ""}<p>— I Do List</p>`
-      );
-      await db
-        .update(calendarEvents)
-        .set({ reminderSentAt: new Date() })
-        .where(eq(calendarEvents.id, e.id));
-      eventReminders++;
+      try {
+        await sendReminderEmail(
+          to,
+          `Upcoming: ${e.title}`,
+          `<p><strong>${e.title}</strong> is coming up on ${formatDate(new Date(e.startAt))}.</p>${
+            e.location ? `<p>Location: ${e.location}</p>` : ""
+          }${e.notes ? `<p>${e.notes}</p>` : ""}<p>— I Do List</p>`
+        );
+        await db
+          .update(calendarEvents)
+          .set({ reminderSentAt: new Date() })
+          .where(eq(calendarEvents.id, e.id));
+        eventReminders++;
+      } catch (err) {
+        console.error(`Failed to send reminder for event ${e.id}:`, err);
+      }
     }
   }
 
