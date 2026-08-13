@@ -118,8 +118,8 @@ export default async function DashboardPage() {
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Starter Checklist"
-          value={`${todoStats.done} / ${todoStats.total}`}
-          sub={todoStats.total > 0 ? `${Math.round(todoPct * 100)}% complete` : "Nothing added yet"}
+          value={`${combinedDone} / ${combinedTotal}`}
+          sub={combinedTotal > 0 ? `${Math.round(todoPct * 100)}% complete` : "Nothing added yet"}
           ring={<Ring pct={todoPct} color="var(--melon)" />}
         />
         <StatCard
