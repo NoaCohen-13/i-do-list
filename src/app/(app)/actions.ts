@@ -96,6 +96,26 @@ export async function createBudgetItem(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function updateBudgetItem(id: string, formData: FormData) {
+  const wedding = await requireWedding();
+  const db = getDb();
+  const paidAmount = Number(formData.get("paidAmount") || 0);
+  await db
+    .update(budgetItems)
+    .set({
+      vendorName: String(formData.get("vendorName") || "").trim() || null,
+      committedCost: String(Number(formData.get("committedCost") || 0)),
+      paidAmount: String(paidAmount),
+      notes: String(formData.get("notes") || "").trim() || null,
+      booked: paidAmount > 0 ? true : undefined,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(budgetItems.id, id), eq(budgetItems.weddingId, wedding.id)));
+  revalidatePath("/budget");
+  revalidatePath("/todos");
+  revalidatePath("/");
+}
+
 export async function toggleBudgetItemBooked(id: string, booked: boolean) {
   const wedding = await requireWedding();
   const db = getDb();

@@ -4,7 +4,7 @@ import { budgetItems } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createBudgetItem, deleteBudgetItem } from "@/app/(app)/actions";
-import { BudgetBookedCheckbox } from "@/components/TodoCheckbox";
+import { EditableBudgetItem } from "@/components/EditableBudgetItem";
 
 export default async function BudgetPage() {
   const wedding = await requireWedding();
@@ -111,25 +111,11 @@ export default async function BudgetPage() {
                   <div className="h-full rounded-full bg-coral" style={{ width: `${Math.min(100, catPct * 100)}%` }} />
                 </div>
                 <ul className="mt-3 space-y-2">
-                  {bucket.items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-2 text-sm">
-                      <BudgetBookedCheckbox id={item.id} booked={item.booked} />
-                      <span className={`flex-1 ${item.booked ? "text-text-muted line-through" : ""}`}>
-                        {item.itemName}
-                        {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
-                      </span>
-                      <span className="tabular-nums text-text-muted whitespace-nowrap">
-                        {Number(item.committedCost) > 0
-                          ? `₪${Number(item.committedCost).toLocaleString()}`
-                          : "—"}
-                      </span>
-                      <form action={deleteBudgetItem.bind(null, item.id)}>
-                        <button type="submit" className="text-text-muted hover:text-berry-strong" aria-label="Remove item">
-                          ✕
-                        </button>
-                      </form>
-                    </li>
-                  ))}
+                  {[...bucket.items]
+                    .sort((a, b) => Number(a.booked) - Number(b.booked))
+                    .map((item) => (
+                      <EditableBudgetItem key={item.id} item={item} onDelete={deleteBudgetItem} />
+                    ))}
                 </ul>
               </div>
             );
