@@ -2,6 +2,7 @@ import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { updateWeddingSettings } from "@/app/(app)/actions";
 import { SyncButton } from "@/components/SyncButton";
+import { CalendarSyncButton } from "@/components/CalendarSyncButton";
 import { ImportForm } from "@/components/ImportForm";
 
 export default async function SettingsPage() {
@@ -54,6 +55,41 @@ export default async function SettingsPage() {
           </div>
         </div>
 
+        <div className="sm:col-span-2 mt-2 border-t border-border pt-5">
+          <h2 className="mb-1 text-lg">Reminders</h2>
+          <p className="mb-4 text-sm text-text-muted">
+            Connect your &ldquo;wedding&rdquo; Google Calendar (via its private iCal link) to get email reminders
+            before appointments, plus reminders for any to-do with a due date.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Calendar iCal URL">
+              <input
+                name="icalUrl"
+                defaultValue={wedding.icalUrl ?? ""}
+                className="input"
+                placeholder="https://calendar.google.com/calendar/ical/..."
+              />
+            </Field>
+            <Field label="Remind these emails (comma-separated)">
+              <input
+                name="reminderEmails"
+                defaultValue={wedding.reminderEmails ?? ""}
+                className="input"
+                placeholder="you@gmail.com, partner@gmail.com"
+              />
+            </Field>
+            <Field label="Days before to remind">
+              <input
+                name="reminderDaysBefore"
+                type="number"
+                min={0}
+                defaultValue={wedding.reminderDaysBefore}
+                className="input"
+              />
+            </Field>
+          </div>
+        </div>
+
         <div className="sm:col-span-2">
           <button type="submit" className="btn-primary">
             Save settings
@@ -71,6 +107,19 @@ export default async function SettingsPage() {
             Syncs also run automatically in the background.
           </p>
           <SyncButton />
+        </div>
+      )}
+
+      {wedding.icalUrl && (
+        <div className="mb-9 rounded-[22px] border border-border bg-surface p-6">
+          <h2 className="mb-1 text-lg">Calendar sync</h2>
+          <p className="mb-4 text-sm text-text-muted">
+            {wedding.lastCalendarSyncedAt
+              ? `Last synced ${new Date(wedding.lastCalendarSyncedAt).toLocaleString()}`
+              : "Never synced yet."}{" "}
+            Reminders send automatically once a day for anything within your reminder window.
+          </p>
+          <CalendarSyncButton />
         </div>
       )}
 

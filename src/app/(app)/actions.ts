@@ -28,6 +28,7 @@ export async function createTodo(formData: FormData) {
     title,
     phase: String(formData.get("phase") || "") || null,
     category: String(formData.get("category") || "") || null,
+    dueDate: String(formData.get("dueDate") || "") || null,
   });
   revalidatePath("/todos");
   revalidatePath("/");
@@ -126,6 +127,9 @@ export async function updateWeddingSettings(formData: FormData) {
   const budgetTab = String(formData.get("budgetTab") || "").trim() || null;
 
   const googleSheetId = sheetUrl ? extractSheetId(sheetUrl) : null;
+  const icalUrl = String(formData.get("icalUrl") || "").trim() || null;
+  const reminderEmails = String(formData.get("reminderEmails") || "").trim() || null;
+  const reminderDaysBefore = Number(formData.get("reminderDaysBefore") || 3);
 
   await db
     .update(weddings)
@@ -135,6 +139,9 @@ export async function updateWeddingSettings(formData: FormData) {
       googleSheetId,
       googleSheetGuestsTab: guestsTab,
       googleSheetBudgetTab: budgetTab,
+      icalUrl,
+      reminderEmails,
+      reminderDaysBefore,
     })
     .where(eq(weddings.id, wedding.id));
 
@@ -147,6 +154,14 @@ export async function syncNow() {
   revalidatePath("/guests");
   revalidatePath("/budget");
   revalidatePath("/");
+  return result;
+}
+
+export async function syncCalendarNow() {
+  const wedding = await requireWedding();
+  const { syncWeddingCalendar } = await import("@/lib/calendar-sync");
+  const result = await syncWeddingCalendar(wedding.id);
+  revalidatePath("/settings");
   return result;
 }
 

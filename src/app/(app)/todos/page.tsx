@@ -93,6 +93,9 @@ export default async function TodosPage() {
         <Field label="Category">
           <input name="category" className="input" placeholder="e.g. Vendors" />
         </Field>
+        <Field label="Due date (for reminders)">
+          <input name="dueDate" type="date" className="input" />
+        </Field>
         <button type="submit" className="btn-primary">
           Add task
         </button>
