@@ -5,6 +5,11 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/session-tasks(.*)",
+  // Vercel Cron calls these with a CRON_SECRET bearer header, not a Clerk
+  // session — the route handlers check that secret themselves. Without this
+  // exemption every cron request got redirected to /sign-in before it ever
+  // reached the handler, so scheduled syncs/reminders silently never ran.
+  "/api/cron(.*)",
 ]);
 
 // auth.protect()'s built-in redirect can resolve to an empty sign-in URL in

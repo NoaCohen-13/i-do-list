@@ -1,9 +1,9 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, asc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { todos, budgetItems } from "@/db/schema";
+import { todos, budgetItems, calendarEvents } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
-import { createTodo, deleteTodo } from "@/app/(app)/actions";
+import { createTodo, deleteTodo, addCalendarEventAsTodo } from "@/app/(app)/actions";
 import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
 import { DeleteButton } from "@/components/DeleteButton";
 
@@ -21,6 +21,12 @@ export default async function TodosPage() {
     orderBy: (b, { asc }) => [asc(b.category)],
   });
   const unbookedVendors = allVendors.filter((v) => !v.booked);
+
+  const upcomingEvents = await db.query.calendarEvents.findMany({
+    where: and(eq(calendarEvents.weddingId, wedding.id), gte(calendarEvents.startAt, new Date())),
+    orderBy: [asc(calendarEvents.startAt)],
+    limit: 5,
+  });
 
   const activeTodos = allTodos.filter((t) => !t.done);
   const phases = new Map<string, typeof allTodos>();
@@ -59,6 +65,41 @@ export default async function TodosPage() {
           {unbookedVendors.length > 0 && ` · ${unbookedVendors.length} vendors still to book`}
         </p>
       </header>
+
+      {upcomingEvents.length > 0 && (
+        <div className="mb-7 overflow-hidden rounded-[22px] border border-border bg-surface">
+          <div className="flex items-center justify-between border-b border-border bg-teal-soft px-5 py-4">
+            <h3 className="text-[1.05rem]">Coming up</h3>
+            <span className="text-[0.78rem] font-bold text-teal-strong">from your calendar</span>
+          </div>
+          {upcomingEvents.map((event) => (
+            <div key={event.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
+              <div className="flex-1">
+                <div dir="auto" className="text-[0.92rem] font-semibold">
+                  {event.title}
+                </div>
+                <div className="text-[0.78rem] text-text-muted">
+                  {new Date(event.startAt).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  {event.location && ` · ${event.location}`}
+                </div>
+              </div>
+              {event.addedAsTodoAt ? (
+                <span className="text-[0.78rem] font-bold text-text-muted">Added ✓</span>
+              ) : (
+                <form action={addCalendarEventAsTodo.bind(null, event.id)}>
+                  <button type="submit" className="text-[0.78rem] font-bold text-melon-strong hover:underline">
+                    Add as task
+                  </button>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {unbookedVendors.length > 0 && (
         <div className="mb-7 overflow-hidden rounded-[22px] border border-border bg-surface">

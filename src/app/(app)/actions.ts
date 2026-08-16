@@ -3,7 +3,7 @@
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
-import { todos, guests, budgetItems, weddings } from "@/db/schema";
+import { todos, guests, budgetItems, weddings, calendarEvents } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { extractSheetId, syncWeddingFromGoogleSheet } from "@/lib/google-sheet-sync";
 
@@ -183,6 +183,25 @@ export async function syncCalendarNow() {
   const result = await syncWeddingCalendar(wedding.id);
   revalidatePath("/settings");
   return result;
+}
+
+export async function addCalendarEventAsTodo(eventId: string) {
+  const wedding = await requireWedding();
+  const db = getDb();
+  const event = await db.query.calendarEvents.findFirst({
+    where: and(eq(calendarEvents.id, eventId), eq(calendarEvents.weddingId, wedding.id)),
+  });
+  if (!event || event.addedAsTodoAt) return;
+
+  await db.insert(todos).values({
+    weddingId: wedding.id,
+    title: event.title,
+    dueDate: new Date(event.startAt).toISOString().slice(0, 10),
+  });
+  await db.update(calendarEvents).set({ addedAsTodoAt: new Date() }).where(eq(calendarEvents.id, eventId));
+
+  revalidatePath("/todos");
+  revalidatePath("/");
 }
 
 export async function importSpreadsheet(formData: FormData) {
