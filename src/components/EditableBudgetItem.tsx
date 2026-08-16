@@ -28,6 +28,9 @@ export function EditableBudgetItem({
     <li className="text-sm">
       <div className="flex items-center gap-2">
         <BudgetBookedCheckbox id={item.id} booked={item.booked} />
+        <span className="min-w-12 tabular-nums text-text-muted whitespace-nowrap">
+          {Number(item.committedCost) > 0 ? `₪${Number(item.committedCost).toLocaleString()}` : ""}
+        </span>
         <button
           type="button"
           dir="auto"
@@ -37,9 +40,6 @@ export function EditableBudgetItem({
           {item.itemName}
           {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
         </button>
-        <span className="tabular-nums text-text-muted whitespace-nowrap">
-          {Number(item.committedCost) > 0 ? `₪${Number(item.committedCost).toLocaleString()}` : ""}
-        </span>
         <DeleteButton
           action={onDelete.bind(null, item.id)}
           confirmMessage={`Remove "${item.itemName}"? This can't be undone.`}
