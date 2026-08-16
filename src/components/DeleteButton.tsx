@@ -16,7 +16,11 @@ export function DeleteButton({
         if (!confirm(confirmMessage)) e.preventDefault();
       }}
     >
-      <button type="submit" className="text-berry hover:text-berry-strong" aria-label={label}>
+      <button
+        type="submit"
+        className="cursor-pointer text-berry hover:text-red-600"
+        aria-label={label}
+      >
         ✕
       </button>
     </form>
