@@ -8,6 +8,7 @@ import {
   date,
   timestamp,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const rsvpStatusEnum = pgEnum("rsvp_status", [
@@ -38,43 +39,57 @@ export const weddings = pgTable("weddings", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const guests = pgTable("guests", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  weddingId: uuid("wedding_id")
-    .notNull()
-    .references(() => weddings.id, { onDelete: "cascade" }),
-  householdName: text("household_name").notNull(),
-  partySize: integer("party_size").notNull().default(1),
-  groupName: text("group_name"),
-  notes: text("notes"),
-  rsvpStatus: rsvpStatusEnum("rsvp_status").notNull().default("pending"),
-  mealChoice: text("meal_choice"),
-  tableNumber: text("table_number"),
-  source: recordSourceEnum("source").notNull().default("manual"),
-  externalRowKey: text("external_row_key"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const guests = pgTable(
+  "guests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id")
+      .notNull()
+      .references(() => weddings.id, { onDelete: "cascade" }),
+    householdName: text("household_name").notNull(),
+    partySize: integer("party_size").notNull().default(1),
+    groupName: text("group_name"),
+    notes: text("notes"),
+    rsvpStatus: rsvpStatusEnum("rsvp_status").notNull().default("pending"),
+    mealChoice: text("meal_choice"),
+    tableNumber: text("table_number"),
+    source: recordSourceEnum("source").notNull().default("manual"),
+    externalRowKey: text("external_row_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // Lets sync upsert on conflict instead of check-then-insert, so a
+    // sheet row can never be inserted twice under the same key.
+    uniqueIndex("guests_wedding_external_row_key_idx").on(table.weddingId, table.externalRowKey),
+  ]
+);
 
-export const budgetItems = pgTable("budget_items", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  weddingId: uuid("wedding_id")
-    .notNull()
-    .references(() => weddings.id, { onDelete: "cascade" }),
-  category: text("category").notNull(),
-  itemName: text("item_name").notNull(),
-  vendorName: text("vendor_name"),
-  contactName: text("contact_name"),
-  contactPhone: text("contact_phone"),
-  committedCost: numeric("committed_cost", { precision: 12, scale: 2 }).notNull().default("0"),
-  paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  booked: boolean("booked").notNull().default(false),
-  notes: text("notes"),
-  source: recordSourceEnum("source").notNull().default("manual"),
-  externalRowKey: text("external_row_key"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const budgetItems = pgTable(
+  "budget_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id")
+      .notNull()
+      .references(() => weddings.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    itemName: text("item_name").notNull(),
+    vendorName: text("vendor_name"),
+    contactName: text("contact_name"),
+    contactPhone: text("contact_phone"),
+    committedCost: numeric("committed_cost", { precision: 12, scale: 2 }).notNull().default("0"),
+    paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    booked: boolean("booked").notNull().default(false),
+    notes: text("notes"),
+    source: recordSourceEnum("source").notNull().default("manual"),
+    externalRowKey: text("external_row_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("budget_items_wedding_external_row_key_idx").on(table.weddingId, table.externalRowKey),
+  ]
+);
 
 export const todos = pgTable("todos", {
   id: uuid("id").primaryKey().defaultRandom(),

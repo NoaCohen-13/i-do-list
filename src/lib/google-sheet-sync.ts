@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { and, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { guests, budgetItems, weddings } from "@/db/schema";
 import { parseGuestRows, parseBudgetRows } from "@/lib/sheet-parse";
@@ -41,22 +41,13 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
     const rows = await fetchSheetCsv(wedding.googleSheetId, wedding.googleSheetGuestsTab);
     const parsed = parseGuestRows(rows);
     for (const g of parsed) {
-      const existing = await db.query.guests.findFirst({
-        where: and(eq(guests.weddingId, weddingId), eq(guests.externalRowKey, g.rowKey)),
-      });
-      if (existing) {
-        await db
-          .update(guests)
-          .set({
-            householdName: g.householdName,
-            partySize: g.partySize,
-            groupName: g.groupName,
-            notes: g.notes,
-            updatedAt: new Date(),
-          })
-          .where(eq(guests.id, existing.id));
-      } else {
-        await db.insert(guests).values({
+      // Upsert on the (weddingId, externalRowKey) unique index so a row is
+      // matched to its existing record atomically — no separate
+      // lookup-then-insert/update race, and no chance of a key-format
+      // change silently re-inserting rows that already exist.
+      await db
+        .insert(guests)
+        .values({
           weddingId,
           householdName: g.householdName,
           partySize: g.partySize,
@@ -64,8 +55,17 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
           notes: g.notes,
           source: "sheet_sync",
           externalRowKey: g.rowKey,
+        })
+        .onConflictDoUpdate({
+          target: [guests.weddingId, guests.externalRowKey],
+          set: {
+            householdName: g.householdName,
+            partySize: g.partySize,
+            groupName: g.groupName,
+            notes: g.notes,
+            updatedAt: new Date(),
+          },
         });
-      }
       guestsSynced++;
     }
   }
@@ -74,31 +74,13 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
     const rows = await fetchSheetCsv(wedding.googleSheetId, wedding.googleSheetBudgetTab);
     const parsed = parseBudgetRows(rows);
     for (const b of parsed) {
-      const existing = await db.query.budgetItems.findFirst({
-        where: and(eq(budgetItems.weddingId, weddingId), eq(budgetItems.externalRowKey, b.rowKey)),
-      });
       // Any payment at all (even just a deposit) means the vendor is
       // secured — auto-mark it booked. Never auto-unbook something that
       // was already booked (e.g. manually, or paid then refunded on paper).
       const autoBooked = b.paidAmount > 0;
-      if (existing) {
-        await db
-          .update(budgetItems)
-          .set({
-            category: b.category,
-            itemName: b.itemName,
-            vendorName: b.vendorName,
-            contactName: b.contactName,
-            contactPhone: b.contactPhone,
-            committedCost: String(b.committedCost),
-            paidAmount: String(b.paidAmount),
-            booked: existing.booked || autoBooked,
-            notes: b.notes,
-            updatedAt: new Date(),
-          })
-          .where(eq(budgetItems.id, existing.id));
-      } else {
-        await db.insert(budgetItems).values({
+      await db
+        .insert(budgetItems)
+        .values({
           weddingId,
           category: b.category,
           itemName: b.itemName,
@@ -111,8 +93,24 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
           notes: b.notes,
           source: "sheet_sync",
           externalRowKey: b.rowKey,
+        })
+        .onConflictDoUpdate({
+          target: [budgetItems.weddingId, budgetItems.externalRowKey],
+          set: {
+            category: b.category,
+            itemName: b.itemName,
+            vendorName: b.vendorName,
+            contactName: b.contactName,
+            contactPhone: b.contactPhone,
+            committedCost: String(b.committedCost),
+            paidAmount: String(b.paidAmount),
+            // Reference the pre-conflict row's own `booked` column so an
+            // existing true never flips back to false.
+            booked: sql`${budgetItems.booked} OR ${autoBooked}`,
+            notes: b.notes,
+            updatedAt: new Date(),
+          },
         });
-      }
       budgetSynced++;
     }
   }
