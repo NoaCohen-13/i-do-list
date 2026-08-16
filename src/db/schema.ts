@@ -103,6 +103,7 @@ export const todos = pgTable("todos", {
   assignee: text("assignee"),
   dueDate: date("due_date"),
   reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  finalReminderSentAt: timestamp("final_reminder_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -118,6 +119,7 @@ export const calendarEvents = pgTable("calendar_events", {
   location: text("location"),
   notes: text("notes"),
   reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  finalReminderSentAt: timestamp("final_reminder_sent_at", { withTimezone: true }),
   addedAsTodoAt: timestamp("added_as_todo_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

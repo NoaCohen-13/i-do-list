@@ -6,6 +6,7 @@ import { getDb } from "@/db";
 import { todos, guests, budgetItems, weddings, calendarEvents } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { extractSheetId, syncWeddingFromGoogleSheet } from "@/lib/google-sheet-sync";
+import { isFullyPaid } from "@/lib/budget";
 
 export async function toggleTodo(id: string, done: boolean) {
   const wedding = await requireWedding();
@@ -82,15 +83,16 @@ export async function createBudgetItem(formData: FormData) {
   const db = getDb();
   const itemName = String(formData.get("itemName") || "").trim();
   if (!itemName) return;
+  const committedCost = Number(formData.get("committedCost") || 0);
   const paidAmount = Number(formData.get("paidAmount") || 0);
   await db.insert(budgetItems).values({
     weddingId: wedding.id,
     category: String(formData.get("category") || "Other"),
     itemName,
     vendorName: String(formData.get("vendorName") || "") || null,
-    committedCost: String(formData.get("committedCost") || "0"),
+    committedCost: String(committedCost),
     paidAmount: String(paidAmount),
-    booked: paidAmount > 0,
+    booked: isFullyPaid(committedCost, paidAmount),
   });
   revalidatePath("/budget");
   revalidatePath("/");
@@ -99,15 +101,16 @@ export async function createBudgetItem(formData: FormData) {
 export async function updateBudgetItem(id: string, formData: FormData) {
   const wedding = await requireWedding();
   const db = getDb();
+  const committedCost = Number(formData.get("committedCost") || 0);
   const paidAmount = Number(formData.get("paidAmount") || 0);
   await db
     .update(budgetItems)
     .set({
       vendorName: String(formData.get("vendorName") || "").trim() || null,
-      committedCost: String(Number(formData.get("committedCost") || 0)),
+      committedCost: String(committedCost),
       paidAmount: String(paidAmount),
       notes: String(formData.get("notes") || "").trim() || null,
-      booked: paidAmount > 0 ? true : undefined,
+      booked: isFullyPaid(committedCost, paidAmount) ? true : undefined,
       updatedAt: new Date(),
     })
     .where(and(eq(budgetItems.id, id), eq(budgetItems.weddingId, wedding.id)));
@@ -257,7 +260,7 @@ export async function importSpreadsheet(formData: FormData) {
         contactPhone: b.contactPhone,
         committedCost: String(b.committedCost),
         paidAmount: String(b.paidAmount),
-        booked: b.paidAmount > 0,
+        booked: isFullyPaid(b.committedCost, b.paidAmount),
         notes: b.notes,
         source: "import",
       });

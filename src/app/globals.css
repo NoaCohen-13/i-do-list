@@ -199,7 +199,9 @@ h1, h2, h3 {
   background: var(--surface);
   border-radius: 0.65rem;
   padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
+  /* Must stay >=16px — iOS Safari auto-zooms the page on focus for any
+     input below that, which was happening on every form field. */
+  font-size: 1rem;
   color: var(--text);
 }
 .input:focus-visible {

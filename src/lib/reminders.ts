@@ -81,6 +81,66 @@ export async function sendDueReminders() {
         console.error(`Failed to send reminder for event ${e.id}:`, err);
       }
     }
+
+    // Second, fixed tier: a last-call reminder the day before, independent
+    // of the wedding's configurable reminderDaysBefore heads-up above.
+    const finalHorizon = new Date();
+    finalHorizon.setDate(finalHorizon.getDate() + 1);
+    const finalHorizonDateStr = finalHorizon.toISOString().slice(0, 10);
+
+    const finalDueTodos = await db.query.todos.findMany({
+      where: and(
+        eq(todos.weddingId, wedding.id),
+        eq(todos.done, false),
+        isNotNull(todos.dueDate),
+        lte(todos.dueDate, finalHorizonDateStr),
+        isNull(todos.finalReminderSentAt)
+      ),
+    });
+
+    for (const t of finalDueTodos) {
+      try {
+        await sendReminderEmail(
+          to,
+          `Tomorrow: ${t.title}`,
+          `<p><strong>${t.title}</strong> is due tomorrow (${t.dueDate}).</p>${
+            t.category ? `<p>Category: ${t.category}</p>` : ""
+          }<p>— I Do List</p>`
+        );
+        await db.update(todos).set({ finalReminderSentAt: new Date() }).where(eq(todos.id, t.id));
+        todoReminders++;
+      } catch (err) {
+        console.error(`Failed to send final reminder for todo ${t.id}:`, err);
+      }
+    }
+
+    const finalDueEvents = await db.query.calendarEvents.findMany({
+      where: and(
+        eq(calendarEvents.weddingId, wedding.id),
+        gte(calendarEvents.startAt, now),
+        lte(calendarEvents.startAt, finalHorizon),
+        isNull(calendarEvents.finalReminderSentAt)
+      ),
+    });
+
+    for (const e of finalDueEvents) {
+      try {
+        await sendReminderEmail(
+          to,
+          `Tomorrow: ${e.title}`,
+          `<p><strong>${e.title}</strong> is happening tomorrow, ${formatDate(new Date(e.startAt))}.</p>${
+            e.location ? `<p>Location: ${e.location}</p>` : ""
+          }${e.notes ? `<p>${e.notes}</p>` : ""}<p>— I Do List</p>`
+        );
+        await db
+          .update(calendarEvents)
+          .set({ finalReminderSentAt: new Date() })
+          .where(eq(calendarEvents.id, e.id));
+        eventReminders++;
+      } catch (err) {
+        console.error(`Failed to send final reminder for event ${e.id}:`, err);
+      }
+    }
   }
 
   return { todoReminders, eventReminders };
