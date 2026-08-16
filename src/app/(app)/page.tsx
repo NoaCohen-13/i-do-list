@@ -1,6 +1,6 @@
-import { sql, eq, and } from "drizzle-orm";
+import { sql, eq, and, gte, asc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { guests, budgetItems, todos } from "@/db/schema";
+import { guests, budgetItems, todos, calendarEvents } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { StatCard, Ring } from "@/components/StatCard";
@@ -69,6 +69,12 @@ export default async function DashboardPage() {
     ...upNextVendors.map((v) => ({ kind: "vendor" as const, id: v.id, title: v.itemName, tag: v.category, done: v.booked })),
   ].slice(0, 5);
 
+  const upcomingEvents = await db.query.calendarEvents.findMany({
+    where: and(eq(calendarEvents.weddingId, wedding.id), gte(calendarEvents.startAt, new Date())),
+    orderBy: [asc(calendarEvents.startAt)],
+    limit: 3,
+  });
+
   const todoPct = combinedTotal > 0 ? combinedDone / combinedTotal : 0;
   const committed = Number(budgetStats.committed);
   const paid = Number(budgetStats.paid);
@@ -134,6 +140,32 @@ export default async function DashboardPage() {
           ring={<Ring pct={budgetPct} color="var(--berry)" />}
         />
       </section>
+
+      {upcomingEvents.length > 0 && (
+        <section className="mt-9">
+          <h2 className="mb-3.5 text-xl">Upcoming events</h2>
+          <div className="overflow-hidden rounded-[22px] border border-border bg-surface">
+            {upcomingEvents.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-center gap-3.5 border-b border-border px-4.5 py-3.5 last:border-b-0"
+              >
+                <div dir="auto" className="flex-1 font-bold">
+                  {event.title}
+                </div>
+                <div className="text-[0.82rem] font-semibold text-text-muted">
+                  {new Date(event.startAt).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  {event.location && ` · ${event.location}`}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-9">
         <h2 className="mb-3.5 text-xl">Up next</h2>
