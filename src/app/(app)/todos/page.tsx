@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { createTodo, deleteTodo, addCalendarEventAsTodo } from "@/app/(app)/actions";
 import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
 import { DeleteButton } from "@/components/DeleteButton";
+import { tagColor } from "@/lib/tag-color";
 
 export default async function TodosPage() {
   const wedding = await requireWedding();
@@ -91,7 +92,10 @@ export default async function TodosPage() {
                 <span className="text-[0.78rem] font-bold text-text-muted">Added ✓</span>
               ) : (
                 <form action={addCalendarEventAsTodo.bind(null, event.id)}>
-                  <button type="submit" className="text-[0.78rem] font-bold text-melon-strong hover:underline">
+                  <button
+                    type="submit"
+                    className="cursor-pointer text-[0.78rem] font-bold text-melon-strong hover:underline"
+                  >
                     Add as task
                   </button>
                 </form>
@@ -116,7 +120,7 @@ export default async function TodosPage() {
               </div>
               <span
                 dir="auto"
-                className="rounded-full bg-melon-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-melon-strong"
+                className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide ${tagColor(item.category)}`}
               >
                 {item.category}
               </span>
@@ -172,7 +176,7 @@ export default async function TodosPage() {
                   {t.category && (
                     <span
                       dir="auto"
-                      className="rounded-full bg-teal-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-teal-strong"
+                      className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide ${tagColor(t.category)}`}
                     >
                       {t.category}
                     </span>

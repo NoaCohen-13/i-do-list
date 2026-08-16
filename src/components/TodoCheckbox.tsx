@@ -33,7 +33,7 @@ export function Checkbox({
       role="checkbox"
       aria-checked={optimisticDone}
       onClick={handleClick}
-      className={`relative flex h-5 w-5 flex-none items-center justify-center rounded-lg border-2 transition-colors ${
+      className={`relative flex h-5 w-5 flex-none cursor-pointer items-center justify-center rounded-lg border-2 transition-colors ${
         optimisticDone ? "border-melon bg-melon" : "border-border-strong bg-surface"
       }`}
     >
