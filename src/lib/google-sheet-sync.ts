@@ -1,8 +1,9 @@
 import Papa from "papaparse";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { guests, budgetItems, weddings } from "@/db/schema";
 import { parseGuestRows, parseBudgetRows } from "@/lib/sheet-parse";
+import { isFullyPaid } from "@/lib/budget";
 
 export function extractSheetId(urlOrId: string): string | null {
   const trimmed = urlOrId.trim();
@@ -68,16 +69,30 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
         });
       guestsSynced++;
     }
+
+    // Rows removed or renamed in the sheet since the last sync leave a
+    // stale record behind under the old key (a rename produces a new key,
+    // orphaning the old one) — prune anything sheet-sourced that the
+    // current sheet no longer accounts for. Manually-added/imported rows
+    // (different `source`) are untouched. Skip if the sheet came back
+    // empty so a transient fetch hiccup can't wipe out real data.
+    const guestKeys = parsed.map((g) => g.rowKey);
+    if (guestKeys.length > 0) {
+      await db
+        .delete(guests)
+        .where(
+          and(eq(guests.weddingId, weddingId), eq(guests.source, "sheet_sync"), notInArray(guests.externalRowKey, guestKeys))
+        );
+    }
   }
 
   if (wedding.googleSheetBudgetTab) {
     const rows = await fetchSheetCsv(wedding.googleSheetId, wedding.googleSheetBudgetTab);
     const parsed = parseBudgetRows(rows);
     for (const b of parsed) {
-      // Any payment at all (even just a deposit) means the vendor is
-      // secured — auto-mark it booked. Never auto-unbook something that
-      // was already booked (e.g. manually, or paid then refunded on paper).
-      const autoBooked = b.paidAmount > 0;
+      // Only auto-mark booked once the item is fully paid off. Never
+      // auto-unbook something that was already booked (e.g. manually).
+      const autoBooked = isFullyPaid(b.committedCost, b.paidAmount);
       await db
         .insert(budgetItems)
         .values({
@@ -112,6 +127,19 @@ export async function syncWeddingFromGoogleSheet(weddingId: string) {
           },
         });
       budgetSynced++;
+    }
+
+    const budgetKeys = parsed.map((b) => b.rowKey);
+    if (budgetKeys.length > 0) {
+      await db
+        .delete(budgetItems)
+        .where(
+          and(
+            eq(budgetItems.weddingId, weddingId),
+            eq(budgetItems.source, "sheet_sync"),
+            notInArray(budgetItems.externalRowKey, budgetKeys)
+          )
+        );
     }
   }
 
