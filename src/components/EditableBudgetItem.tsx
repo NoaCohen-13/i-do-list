@@ -32,7 +32,7 @@ export function EditableBudgetItem({
           type="button"
           dir="auto"
           onClick={() => setOpen((v) => !v)}
-          className={`flex-1 text-start hover:underline ${item.booked ? "text-text-muted line-through" : ""}`}
+          className={`flex-1 cursor-pointer text-start hover:underline ${item.booked ? "text-text-muted line-through" : ""}`}
         >
           {item.itemName}
           {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
