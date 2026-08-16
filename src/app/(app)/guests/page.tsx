@@ -4,6 +4,7 @@ import { guests } from "@/db/schema";
 import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createGuest, updateGuestRsvp, deleteGuest } from "@/app/(app)/actions";
+import { DeleteButton } from "@/components/DeleteButton";
 
 const RSVP_STYLES: Record<string, string> = {
   confirmed: "bg-melon-soft text-melon-strong",
@@ -111,9 +112,11 @@ export default async function GuestsPage() {
             ) : (
               allGuests.map((g) => (
                 <tr key={g.id} className="border-b border-border last:border-b-0 hover:bg-surface-2">
-                  <Td>{g.householdName}</Td>
+                  <Td dir="auto">{g.householdName}</Td>
                   <Td className="tabular-nums">{g.partySize}</Td>
-                  <Td className="text-text-muted">{g.groupName ?? "—"}</Td>
+                  <Td dir="auto" className="text-text-muted">
+                    {g.groupName ?? "—"}
+                  </Td>
                   <Td>
                     <div className="flex gap-1">
                       {(["pending", "confirmed", "declined"] as const).map((status) => (
@@ -131,11 +134,11 @@ export default async function GuestsPage() {
                     </div>
                   </Td>
                   <Td>
-                    <form action={deleteGuest.bind(null, g.id)}>
-                      <button type="submit" className="text-text-muted hover:text-berry-strong" aria-label="Remove guest">
-                        ✕
-                      </button>
-                    </form>
+                    <DeleteButton
+                      action={deleteGuest.bind(null, g.id)}
+                      confirmMessage={`Remove "${g.householdName}"? This can't be undone.`}
+                      label="Remove guest"
+                    />
                   </Td>
                 </tr>
               ))
@@ -173,6 +176,18 @@ function Th({ children }: { children?: React.ReactNode }) {
   );
 }
 
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3.5 text-[0.92rem] ${className}`}>{children}</td>;
+function Td({
+  children,
+  className = "",
+  dir,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  dir?: "auto" | "ltr" | "rtl";
+}) {
+  return (
+    <td dir={dir} className={`px-4 py-3.5 text-[0.92rem] ${className}`}>
+      {children}
+    </td>
+  );
 }

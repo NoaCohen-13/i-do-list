@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BudgetBookedCheckbox } from "@/components/TodoCheckbox";
+import { DeleteButton } from "@/components/DeleteButton";
 import { updateBudgetItem } from "@/app/(app)/actions";
 
 type BudgetItem = {
@@ -29,8 +30,9 @@ export function EditableBudgetItem({
         <BudgetBookedCheckbox id={item.id} booked={item.booked} />
         <button
           type="button"
+          dir="auto"
           onClick={() => setOpen((v) => !v)}
-          className={`flex-1 text-left ${item.booked ? "text-text-muted line-through" : ""}`}
+          className={`flex-1 text-start ${item.booked ? "text-text-muted line-through" : ""}`}
         >
           {item.itemName}
           {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
@@ -38,19 +40,11 @@ export function EditableBudgetItem({
         <span className="tabular-nums text-text-muted whitespace-nowrap">
           {Number(item.committedCost) > 0 ? `₪${Number(item.committedCost).toLocaleString()}` : "—"}
         </span>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="text-text-muted hover:text-melon-strong"
-          aria-label="Edit item"
-        >
-          ✎
-        </button>
-        <form action={onDelete.bind(null, item.id)}>
-          <button type="submit" className="text-text-muted hover:text-berry-strong" aria-label="Remove item">
-            ✕
-          </button>
-        </form>
+        <DeleteButton
+          action={onDelete.bind(null, item.id)}
+          confirmMessage={`Remove "${item.itemName}"? This can't be undone.`}
+          label="Remove item"
+        />
       </div>
 
       {open && (

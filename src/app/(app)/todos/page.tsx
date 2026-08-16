@@ -5,6 +5,7 @@ import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createTodo, deleteTodo } from "@/app/(app)/actions";
 import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
+import { DeleteButton } from "@/components/DeleteButton";
 
 export default async function TodosPage() {
   const wedding = await requireWedding();
@@ -68,11 +69,14 @@ export default async function TodosPage() {
           {unbookedVendors.map((item) => (
             <div key={item.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
               <BudgetBookedCheckbox id={item.id} booked={item.booked} />
-              <div className="flex-1 text-[0.92rem] font-semibold">
+              <div dir="auto" className="flex-1 text-[0.92rem] font-semibold">
                 {item.itemName}
                 {item.vendorName && <span className="font-normal text-text-muted"> · {item.vendorName}</span>}
               </div>
-              <span className="rounded-full bg-melon-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-melon-strong">
+              <span
+                dir="auto"
+                className="rounded-full bg-melon-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-melon-strong"
+              >
                 {item.category}
               </span>
             </div>
@@ -118,19 +122,25 @@ export default async function TodosPage() {
               {items.map((t) => (
                 <div key={t.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
                   <TodoCheckbox id={t.id} done={t.done} />
-                  <div className={`flex-1 text-[0.92rem] font-semibold ${t.done ? "text-text-muted line-through" : ""}`}>
+                  <div
+                    dir="auto"
+                    className={`flex-1 text-[0.92rem] font-semibold ${t.done ? "text-text-muted line-through" : ""}`}
+                  >
                     {t.title}
                   </div>
                   {t.category && (
-                    <span className="rounded-full bg-teal-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-teal-strong">
+                    <span
+                      dir="auto"
+                      className="rounded-full bg-teal-soft px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-teal-strong"
+                    >
                       {t.category}
                     </span>
                   )}
-                  <form action={deleteTodo.bind(null, t.id)}>
-                    <button type="submit" className="text-text-muted hover:text-berry-strong" aria-label="Delete task">
-                      ✕
-                    </button>
-                  </form>
+                  <DeleteButton
+                    action={deleteTodo.bind(null, t.id)}
+                    confirmMessage={`Delete "${t.title}"? This can't be undone.`}
+                    label="Delete task"
+                  />
                 </div>
               ))}
             </div>
@@ -155,7 +165,7 @@ export default async function TodosPage() {
                     ) : (
                       <BudgetBookedCheckbox id={item.id} booked={true} />
                     )}
-                    <div className="flex-1 text-[0.92rem] font-semibold text-text-muted line-through">
+                    <div dir="auto" className="flex-1 text-[0.92rem] font-semibold text-text-muted line-through">
                       {item.title}
                     </div>
                   </div>

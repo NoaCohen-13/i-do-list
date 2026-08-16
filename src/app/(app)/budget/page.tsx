@@ -98,14 +98,18 @@ export default async function BudgetPage() {
             return (
               <div key={category} className="rounded-[20px] border border-border bg-surface p-4.5">
                 <div className="mb-2.5 flex items-baseline justify-between">
-                  <span className="font-bold text-[0.95rem]">{category}</span>
+                  <span dir="auto" className="font-bold text-[0.95rem]">
+                    {category}
+                  </span>
                   <span className="rounded-full bg-melon-soft px-2.5 py-0.5 text-[0.74rem] font-bold text-melon-strong">
                     {bucket.committed > 0 ? `${Math.round(catPct * 100)}% paid` : "Not started"}
                   </span>
                 </div>
                 <div className="mb-2 flex justify-between text-[0.82rem] font-semibold text-text-muted">
                   <span>Committed ₪{bucket.committed.toLocaleString()}</span>
-                  <b className="text-text">₪{bucket.paid.toLocaleString()}</b>
+                  <span>
+                    Paid <b className="text-text">₪{bucket.paid.toLocaleString()}</b>
+                  </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
                   <div className="h-full rounded-full bg-coral" style={{ width: `${Math.min(100, catPct * 100)}%` }} />
