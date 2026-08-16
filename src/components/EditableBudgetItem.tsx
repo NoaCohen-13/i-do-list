@@ -38,7 +38,7 @@ export function EditableBudgetItem({
           {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
         </button>
         <span className="tabular-nums text-text-muted whitespace-nowrap">
-          {Number(item.committedCost) > 0 ? `₪${Number(item.committedCost).toLocaleString()}` : "—"}
+          {Number(item.committedCost) > 0 ? `₪${Number(item.committedCost).toLocaleString()}` : ""}
         </span>
         <DeleteButton
           action={onDelete.bind(null, item.id)}
