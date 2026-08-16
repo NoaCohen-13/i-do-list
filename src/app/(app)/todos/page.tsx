@@ -75,10 +75,8 @@ export default async function TodosPage() {
           </div>
           {upcomingEvents.map((event) => (
             <div key={event.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
-              <div className="flex-1">
-                <div dir="auto" className="text-[0.92rem] font-semibold">
-                  {event.title}
-                </div>
+              <div dir="auto" className="flex-1">
+                <div className="text-[0.92rem] font-semibold">{event.title}</div>
                 <div className="text-[0.78rem] text-text-muted">
                   {new Date(event.startAt).toLocaleDateString("en-US", {
                     weekday: "short",
@@ -113,17 +111,17 @@ export default async function TodosPage() {
           </div>
           {unbookedVendors.map((item) => (
             <div key={item.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
-              <BudgetBookedCheckbox id={item.id} booked={item.booked} />
-              <div dir="auto" className="flex-1 text-[0.92rem] font-semibold">
-                {item.itemName}
-                {item.vendorName && <span className="font-normal text-text-muted"> · {item.vendorName}</span>}
-              </div>
               <span
                 dir="auto"
                 className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide ${tagColor(item.category)}`}
               >
                 {item.category}
               </span>
+              <div dir="auto" className="flex-1 text-[0.92rem] font-semibold">
+                {item.itemName}
+                {item.vendorName && <span className="font-normal text-text-muted"> · {item.vendorName}</span>}
+              </div>
+              <BudgetBookedCheckbox id={item.id} booked={item.booked} />
             </div>
           ))}
         </div>

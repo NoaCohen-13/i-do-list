@@ -5,6 +5,7 @@ import { requireWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { StatCard, Ring } from "@/components/StatCard";
 import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
+import { tagColor } from "@/lib/tag-color";
 
 function formatDate(d: string) {
   return new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
@@ -185,9 +186,14 @@ export default async function DashboardPage() {
                 ) : (
                   <BudgetBookedCheckbox id={t.id} booked={t.done} />
                 )}
-                <div className="flex-1 font-bold">{t.title}</div>
+                <div dir="auto" className="flex-1 font-bold">
+                  {t.title}
+                </div>
                 {t.tag && (
-                  <span className="rounded-full bg-coral-soft px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-coral-strong">
+                  <span
+                    dir="auto"
+                    className={`rounded-full px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide ${tagColor(t.tag)}`}
+                  >
                     {t.tag}
                   </span>
                 )}

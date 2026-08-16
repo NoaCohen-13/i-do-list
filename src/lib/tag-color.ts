@@ -1,8 +1,12 @@
 const TAG_COLORS = [
   "bg-melon-soft text-melon-strong",
-  "bg-teal-soft text-teal-strong",
-  "bg-coral-soft text-coral-strong",
+  "bg-sky-soft text-sky-strong",
+  "bg-amber-soft text-amber-strong",
   "bg-berry-soft text-berry-strong",
+  "bg-sage-soft text-sage-strong",
+  "bg-coral-soft text-coral-strong",
+  "bg-violet-soft text-violet-strong",
+  "bg-teal-soft text-teal-strong",
 ];
 
 /** Deterministic color for a category tag, stable across renders and pages. */
