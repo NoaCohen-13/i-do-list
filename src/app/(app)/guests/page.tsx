@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { guests } from "@/db/schema";
-import { requireWedding } from "@/lib/wedding";
+import { requireWedding, canEditWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createGuest, updateGuestRsvp, deleteGuest } from "@/app/(app)/actions";
 import { DeleteButton } from "@/components/DeleteButton";
@@ -14,6 +14,7 @@ const RSVP_STYLES: Record<string, string> = {
 
 export default async function GuestsPage() {
   const wedding = await requireWedding();
+  const canEdit = await canEditWedding(wedding);
   const db = getDb();
 
   const allGuests = await db.query.guests.findMany({
@@ -73,23 +74,25 @@ export default async function GuestsPage() {
         </div>
       )}
 
-      <form
-        action={createGuest}
-        className="mb-7 flex flex-wrap items-end gap-3 rounded-[20px] border border-dashed border-border-strong bg-surface p-4.5"
-      >
-        <Field label="Household">
-          <input name="householdName" required className="input" placeholder="e.g. The Cohen Family" />
-        </Field>
-        <Field label="Party size">
-          <input name="partySize" type="number" min={1} defaultValue={1} className="input w-20" />
-        </Field>
-        <Field label="Group">
-          <input name="groupName" className="input" placeholder="e.g. Noa's Family" />
-        </Field>
-        <button type="submit" className="btn-primary">
-          Add guest
-        </button>
-      </form>
+      {canEdit && (
+        <form
+          action={createGuest}
+          className="mb-7 flex flex-wrap items-end gap-3 rounded-[20px] border border-dashed border-border-strong bg-surface p-4.5"
+        >
+          <Field label="Household">
+            <input name="householdName" required className="input" placeholder="e.g. The Cohen Family" />
+          </Field>
+          <Field label="Party size">
+            <input name="partySize" type="number" min={1} defaultValue={1} className="input w-20" />
+          </Field>
+          <Field label="Group">
+            <input name="groupName" className="input" placeholder="e.g. Noa's Family" />
+          </Field>
+          <button type="submit" className="btn-primary">
+            Add guest
+          </button>
+        </form>
+      )}
 
       <div className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         <table className="w-full min-w-[640px] border-collapse">
@@ -118,27 +121,37 @@ export default async function GuestsPage() {
                     {g.groupName ?? "—"}
                   </Td>
                   <Td>
-                    <div className="flex gap-1">
-                      {(["pending", "confirmed", "declined"] as const).map((status) => (
-                        <form key={status} action={updateGuestRsvp.bind(null, g.id, status)}>
-                          <button
-                            type="submit"
-                            className={`rounded-full px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide transition-opacity ${
-                              RSVP_STYLES[status]
-                            } ${g.rsvpStatus === status ? "" : "opacity-30 hover:opacity-70"}`}
-                          >
-                            {status}
-                          </button>
-                        </form>
-                      ))}
-                    </div>
+                    {canEdit ? (
+                      <div className="flex gap-1">
+                        {(["pending", "confirmed", "declined"] as const).map((status) => (
+                          <form key={status} action={updateGuestRsvp.bind(null, g.id, status)}>
+                            <button
+                              type="submit"
+                              className={`rounded-full px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide transition-opacity ${
+                                RSVP_STYLES[status]
+                              } ${g.rsvpStatus === status ? "" : "opacity-30 hover:opacity-70"}`}
+                            >
+                              {status}
+                            </button>
+                          </form>
+                        ))}
+                      </div>
+                    ) : (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide ${RSVP_STYLES[g.rsvpStatus]}`}
+                      >
+                        {g.rsvpStatus}
+                      </span>
+                    )}
                   </Td>
                   <Td>
-                    <DeleteButton
-                      action={deleteGuest.bind(null, g.id)}
-                      confirmMessage={`Remove "${g.householdName}"? This can't be undone.`}
-                      label="Remove guest"
-                    />
+                    {canEdit && (
+                      <DeleteButton
+                        action={deleteGuest.bind(null, g.id)}
+                        confirmMessage={`Remove "${g.householdName}"? This can't be undone.`}
+                        label="Remove guest"
+                      />
+                    )}
                   </Td>
                 </tr>
               ))

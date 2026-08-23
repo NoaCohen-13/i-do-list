@@ -1,22 +1,30 @@
 import Link from "next/link";
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 
-const NAV_LINKS = [
-  { href: "/", label: "Dashboard", short: "Home" },
-  { href: "/guests", label: "Guests", short: "Guests" },
-  { href: "/budget", label: "Budget", short: "Budget" },
-  { href: "/todos", label: "To-Dos", short: "To-Dos" },
-  { href: "/settings", label: "Settings", short: "Settings" },
-];
+function navLinks(isAdmin: boolean) {
+  return [
+    { href: "/", label: "Dashboard", short: "Home" },
+    { href: "/guests", label: "Guests", short: "Guests" },
+    { href: "/budget", label: "Budget", short: "Budget" },
+    { href: "/todos", label: "To-Dos", short: "To-Dos" },
+    // Only the wedding owner manages who has access — editors/viewers don't see this tab.
+    ...(isAdmin ? [{ href: "/requests", label: "Requests", short: "Requests" }] : []),
+    { href: "/settings", label: "Settings", short: "Settings" },
+  ];
+}
 
-export function AppShell({
+export async function AppShell({
   children,
   active,
 }: {
   children: React.ReactNode;
   active: string;
 }) {
+  const { orgRole } = await auth();
+  const NAV_LINKS = navLinks(orgRole === "org:admin");
+
   return (
     <div className="min-h-screen bg-bg">
       <div className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur">

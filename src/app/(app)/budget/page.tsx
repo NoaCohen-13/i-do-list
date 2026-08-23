@@ -1,13 +1,14 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { budgetItems } from "@/db/schema";
-import { requireWedding } from "@/lib/wedding";
+import { requireWedding, canEditWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createBudgetItem, deleteBudgetItem } from "@/app/(app)/actions";
 import { EditableBudgetItem } from "@/components/EditableBudgetItem";
 
 export default async function BudgetPage() {
   const wedding = await requireWedding();
+  const canEdit = await canEditWedding(wedding);
   const db = getDb();
 
   const items = await db.query.budgetItems.findMany({
@@ -63,29 +64,31 @@ export default async function BudgetPage() {
         </div>
       </div>
 
-      <form
-        action={createBudgetItem}
-        className="mb-7 flex flex-wrap items-end gap-3 rounded-[20px] border border-dashed border-border-strong bg-surface p-4.5"
-      >
-        <Field label="Category">
-          <input name="category" required className="input" placeholder="e.g. Venue" />
-        </Field>
-        <Field label="Item">
-          <input name="itemName" required className="input" placeholder="e.g. Photographer" />
-        </Field>
-        <Field label="Vendor">
-          <input name="vendorName" className="input" placeholder="Optional" />
-        </Field>
-        <Field label="Committed ₪">
-          <input name="committedCost" type="number" step="0.01" defaultValue={0} className="input w-28" />
-        </Field>
-        <Field label="Paid ₪">
-          <input name="paidAmount" type="number" step="0.01" defaultValue={0} className="input w-28" />
-        </Field>
-        <button type="submit" className="btn-primary">
-          Add item
-        </button>
-      </form>
+      {canEdit && (
+        <form
+          action={createBudgetItem}
+          className="mb-7 flex flex-wrap items-end gap-3 rounded-[20px] border border-dashed border-border-strong bg-surface p-4.5"
+        >
+          <Field label="Category">
+            <input name="category" required className="input" placeholder="e.g. Venue" />
+          </Field>
+          <Field label="Item">
+            <input name="itemName" required className="input" placeholder="e.g. Photographer" />
+          </Field>
+          <Field label="Vendor">
+            <input name="vendorName" className="input" placeholder="Optional" />
+          </Field>
+          <Field label="Committed ₪">
+            <input name="committedCost" type="number" step="0.01" defaultValue={0} className="input w-28" />
+          </Field>
+          <Field label="Paid ₪">
+            <input name="paidAmount" type="number" step="0.01" defaultValue={0} className="input w-28" />
+          </Field>
+          <button type="submit" className="btn-primary">
+            Add item
+          </button>
+        </form>
+      )}
 
       {byCategory.size === 0 ? (
         <p className="rounded-[20px] border border-border bg-surface p-6 text-text-muted">
@@ -118,7 +121,7 @@ export default async function BudgetPage() {
                   {[...bucket.items]
                     .sort((a, b) => Number(a.booked) - Number(b.booked))
                     .map((item) => (
-                      <EditableBudgetItem key={item.id} item={item} onDelete={deleteBudgetItem} />
+                      <EditableBudgetItem key={item.id} item={item} onDelete={deleteBudgetItem} canEdit={canEdit} />
                     ))}
                 </ul>
               </div>

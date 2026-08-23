@@ -23,6 +23,14 @@ export const recordSourceEnum = pgEnum("record_source", [
   "import",
 ]);
 
+export const accessRequestStatusEnum = pgEnum("access_request_status", [
+  "pending",
+  "approved",
+  "denied",
+]);
+
+export const accessRoleEnum = pgEnum("access_role", ["viewer", "editor"]);
+
 export const weddings = pgTable("weddings", {
   id: uuid("id").primaryKey().defaultRandom(),
   clerkOrgId: text("clerk_org_id").notNull().unique(),
@@ -107,6 +115,27 @@ export const todos = pgTable("todos", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const accessRequests = pgTable(
+  "access_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id")
+      .notNull()
+      .references(() => weddings.id, { onDelete: "cascade" }),
+    requesterUserId: text("requester_user_id").notNull(),
+    requesterEmail: text("requester_email").notNull(),
+    requesterName: text("requester_name"),
+    status: accessRequestStatusEnum("status").notNull().default("pending"),
+    role: accessRoleEnum("role"), // null while pending; set by the owner on approval
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+  },
+  (table) => [
+    // Re-requesting after a denial reuses the same row instead of piling up duplicates.
+    uniqueIndex("access_requests_wedding_requester_idx").on(table.weddingId, table.requesterUserId),
+  ]
+);
 
 export const calendarEvents = pgTable("calendar_events", {
   id: uuid("id").primaryKey().defaultRandom(),

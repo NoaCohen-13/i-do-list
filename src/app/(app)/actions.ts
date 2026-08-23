@@ -2,14 +2,17 @@
 
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { getDb } from "@/db";
-import { todos, guests, budgetItems, weddings, calendarEvents } from "@/db/schema";
-import { requireWedding } from "@/lib/wedding";
+import { todos, guests, budgetItems, weddings, calendarEvents, accessRequests } from "@/db/schema";
+import { requireWedding, requireEditWedding } from "@/lib/wedding";
 import { extractSheetId, syncWeddingFromGoogleSheet } from "@/lib/google-sheet-sync";
 import { isFullyPaid } from "@/lib/budget";
+import { sendAccessRequestEmail } from "@/lib/send-email";
+import { getSiteUrl } from "@/lib/site-url";
 
 export async function toggleTodo(id: string, done: boolean) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   await db
     .update(todos)
@@ -20,7 +23,7 @@ export async function toggleTodo(id: string, done: boolean) {
 }
 
 export async function createTodo(formData: FormData) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   const title = String(formData.get("title") || "").trim();
   if (!title) return;
@@ -36,7 +39,7 @@ export async function createTodo(formData: FormData) {
 }
 
 export async function deleteTodo(id: string) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   await db.delete(todos).where(and(eq(todos.id, id), eq(todos.weddingId, wedding.id)));
   revalidatePath("/todos");
@@ -44,7 +47,7 @@ export async function deleteTodo(id: string) {
 }
 
 export async function createGuest(formData: FormData) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   const householdName = String(formData.get("householdName") || "").trim();
   if (!householdName) return;
@@ -60,7 +63,7 @@ export async function createGuest(formData: FormData) {
 }
 
 export async function updateGuestRsvp(id: string, rsvpStatus: "pending" | "confirmed" | "declined") {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   await db
     .update(guests)
@@ -71,7 +74,7 @@ export async function updateGuestRsvp(id: string, rsvpStatus: "pending" | "confi
 }
 
 export async function deleteGuest(id: string) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   await db.delete(guests).where(and(eq(guests.id, id), eq(guests.weddingId, wedding.id)));
   revalidatePath("/guests");
@@ -79,7 +82,7 @@ export async function deleteGuest(id: string) {
 }
 
 export async function createBudgetItem(formData: FormData) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   const itemName = String(formData.get("itemName") || "").trim();
   if (!itemName) return;
@@ -99,7 +102,7 @@ export async function createBudgetItem(formData: FormData) {
 }
 
 export async function updateBudgetItem(id: string, formData: FormData) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   const committedCost = Number(formData.get("committedCost") || 0);
   const paidAmount = Number(formData.get("paidAmount") || 0);
@@ -120,7 +123,7 @@ export async function updateBudgetItem(id: string, formData: FormData) {
 }
 
 export async function toggleBudgetItemBooked(id: string, booked: boolean) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   await db
     .update(budgetItems)
@@ -132,7 +135,7 @@ export async function toggleBudgetItemBooked(id: string, booked: boolean) {
 }
 
 export async function deleteBudgetItem(id: string) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   await db.delete(budgetItems).where(and(eq(budgetItems.id, id), eq(budgetItems.weddingId, wedding.id)));
   revalidatePath("/budget");
@@ -140,7 +143,7 @@ export async function deleteBudgetItem(id: string) {
 }
 
 export async function updateWeddingSettings(formData: FormData) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
 
   const weddingDate = String(formData.get("weddingDate") || "") || null;
@@ -172,7 +175,7 @@ export async function updateWeddingSettings(formData: FormData) {
 }
 
 export async function syncNow() {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const result = await syncWeddingFromGoogleSheet(wedding.id);
   revalidatePath("/guests");
   revalidatePath("/budget");
@@ -181,7 +184,7 @@ export async function syncNow() {
 }
 
 export async function syncCalendarNow() {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const { syncWeddingCalendar } = await import("@/lib/calendar-sync");
   const result = await syncWeddingCalendar(wedding.id);
   revalidatePath("/settings");
@@ -189,7 +192,7 @@ export async function syncCalendarNow() {
 }
 
 export async function addCalendarEventAsTodo(eventId: string) {
-  const wedding = await requireWedding();
+  const wedding = await requireEditWedding();
   const db = getDb();
   const event = await db.query.calendarEvents.findFirst({
     where: and(eq(calendarEvents.id, eventId), eq(calendarEvents.weddingId, wedding.id)),
@@ -207,8 +210,93 @@ export async function addCalendarEventAsTodo(eventId: string) {
   revalidatePath("/");
 }
 
-export async function importSpreadsheet(formData: FormData) {
+export async function requestAccess(weddingId: string) {
+  const { userId, orgId } = await auth();
+  if (!userId) return { ok: false as const, error: "Not signed in." };
+
+  const db = getDb();
+  const wedding = await db.query.weddings.findFirst({ where: eq(weddings.id, weddingId) });
+  if (!wedding) return { ok: false as const, error: "Wedding not found." };
+  if (wedding.clerkOrgId === orgId) return { ok: false as const, error: "You already have access." };
+
+  const user = await currentUser();
+  const requesterEmail =
+    user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress ?? "";
+  const requesterName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null;
+
+  await db
+    .insert(accessRequests)
+    .values({ weddingId, requesterUserId: userId, requesterEmail, requesterName, status: "pending" })
+    .onConflictDoUpdate({
+      target: [accessRequests.weddingId, accessRequests.requesterUserId],
+      set: { status: "pending", requesterEmail, requesterName, respondedAt: null, createdAt: new Date() },
+    });
+
+  const client = await clerkClient();
+  const org = await client.organizations.getOrganization({ organizationId: wedding.clerkOrgId });
+  const memberships = await client.organizations.getOrganizationMembershipList({
+    organizationId: wedding.clerkOrgId,
+  });
+  // publicUserData.identifier is the member's email for this app's email/password Clerk setup.
+  const adminEmails = memberships.data
+    .filter((m) => m.role === "org:admin" && m.publicUserData?.identifier)
+    .map((m) => m.publicUserData!.identifier);
+
+  if (adminEmails.length > 0) {
+    await sendAccessRequestEmail(
+      adminEmails,
+      requesterName ?? "",
+      requesterEmail,
+      org.name ? `${org.name}'s wedding` : "a wedding",
+      `${getSiteUrl()}/requests`
+    );
+  }
+
+  revalidatePath(`/join/${weddingId}`);
+  return { ok: true as const };
+}
+
+export async function approveAccessRequest(requestId: string, role: "viewer" | "editor") {
   const wedding = await requireWedding();
+  const { orgRole } = await auth();
+  if (orgRole !== "org:admin") return;
+
+  const db = getDb();
+  const request = await db.query.accessRequests.findFirst({ where: eq(accessRequests.id, requestId) });
+  if (!request || request.weddingId !== wedding.id) return;
+
+  const client = await clerkClient();
+  await client.organizations.createOrganizationMembership({
+    organizationId: wedding.clerkOrgId,
+    userId: request.requesterUserId,
+    role: "org:member",
+  });
+
+  await db
+    .update(accessRequests)
+    .set({ status: "approved", role, respondedAt: new Date() })
+    .where(eq(accessRequests.id, requestId));
+  revalidatePath("/requests");
+}
+
+export async function denyAccessRequest(requestId: string) {
+  const wedding = await requireWedding();
+  const { orgRole } = await auth();
+  if (orgRole !== "org:admin") return;
+
+  const db = getDb();
+  const request = await db.query.accessRequests.findFirst({ where: eq(accessRequests.id, requestId) });
+  if (!request || request.weddingId !== wedding.id) return;
+
+  await db
+    .update(accessRequests)
+    .set({ status: "denied", respondedAt: new Date() })
+    .where(eq(accessRequests.id, requestId));
+  revalidatePath("/requests");
+}
+
+export async function importSpreadsheet(formData: FormData) {
+  const wedding = await requireEditWedding();
   const db = getDb();
   const file = formData.get("file") as File | null;
   const kind = String(formData.get("kind") || "guests");

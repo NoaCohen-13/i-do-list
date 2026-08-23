@@ -18,36 +18,47 @@ type BudgetItem = {
 export function EditableBudgetItem({
   item,
   onDelete,
+  canEdit = true,
 }: {
   item: BudgetItem;
   onDelete: (id: string) => Promise<void>;
+  canEdit?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <li className="text-sm">
       <div className="flex items-center gap-2">
-        <DeleteButton
-          action={onDelete.bind(null, item.id)}
-          confirmMessage={`Remove "${item.itemName}"? This can't be undone.`}
-          label="Remove item"
-        />
+        {canEdit && (
+          <DeleteButton
+            action={onDelete.bind(null, item.id)}
+            confirmMessage={`Remove "${item.itemName}"? This can't be undone.`}
+            label="Remove item"
+          />
+        )}
         <span className="min-w-12 tabular-nums text-text-muted whitespace-nowrap">
           {Number(item.committedCost) > 0 ? `₪${Number(item.committedCost).toLocaleString()}` : ""}
         </span>
-        <button
-          type="button"
-          dir="auto"
-          onClick={() => setOpen((v) => !v)}
-          className={`flex-1 cursor-pointer text-start hover:underline ${item.booked ? "text-text-muted line-through" : ""}`}
-        >
-          {item.itemName}
-          {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
-        </button>
-        <BudgetBookedCheckbox id={item.id} booked={item.booked} />
+        {canEdit ? (
+          <button
+            type="button"
+            dir="auto"
+            onClick={() => setOpen((v) => !v)}
+            className={`flex-1 cursor-pointer text-start hover:underline ${item.booked ? "text-text-muted line-through" : ""}`}
+          >
+            {item.itemName}
+            {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
+          </button>
+        ) : (
+          <span dir="auto" className={`flex-1 text-start ${item.booked ? "text-text-muted line-through" : ""}`}>
+            {item.itemName}
+            {item.vendorName && <span className="text-text-muted"> · {item.vendorName}</span>}
+          </span>
+        )}
+        <BudgetBookedCheckbox id={item.id} booked={item.booked} readOnly={!canEdit} />
       </div>
 
-      {open && (
+      {open && canEdit && (
         <form
           action={async (formData) => {
             await updateBudgetItem(item.id, formData);

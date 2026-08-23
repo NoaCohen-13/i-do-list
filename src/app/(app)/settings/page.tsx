@@ -1,12 +1,41 @@
-import { requireWedding } from "@/lib/wedding";
+import { requireWedding, canEditWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { updateWeddingSettings } from "@/app/(app)/actions";
 import { SyncButton } from "@/components/SyncButton";
 import { CalendarSyncButton } from "@/components/CalendarSyncButton";
 import { ImportForm } from "@/components/ImportForm";
+import { ShareLinkCard } from "@/components/ShareLinkCard";
+import { getSiteUrl } from "@/lib/site-url";
 
 export default async function SettingsPage() {
   const wedding = await requireWedding();
+  const canEdit = await canEditWedding(wedding);
+
+  if (!canEdit) {
+    return (
+      <AppShell active="/settings">
+        <header className="pt-9 pb-6">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-coral-strong">
+            Settings
+          </span>
+          <h1 className="text-3xl">Your wedding details</h1>
+        </header>
+        <div className="rounded-[22px] border border-border bg-surface p-6">
+          <p className="mb-4 text-sm text-text-muted">You have view-only access to this wedding.</p>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-[0.78rem] font-bold text-text-muted">Wedding date</dt>
+              <dd>{wedding.weddingDate || "Not set"}</dd>
+            </div>
+            <div>
+              <dt className="text-[0.78rem] font-bold text-text-muted">Venue</dt>
+              <dd>{wedding.venueName || "Not set"}</dd>
+            </div>
+          </dl>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell active="/settings">
@@ -16,6 +45,15 @@ export default async function SettingsPage() {
         </span>
         <h1 className="text-3xl">Your wedding details</h1>
       </header>
+
+      <div className="mb-9 rounded-[22px] border border-border bg-surface p-6">
+        <h2 className="mb-1 text-lg">Share this wedding</h2>
+        <p className="mb-4 text-sm text-text-muted">
+          Send this link to anyone you want to view your wedding. They&apos;ll need to request access, and
+          you can approve or deny it from the <a href="/requests" className="font-bold text-melon-strong hover:underline">Requests</a> page.
+        </p>
+        <ShareLinkCard url={`${getSiteUrl()}/join/${wedding.id}`} />
+      </div>
 
       <form action={updateWeddingSettings} className="mb-9 grid gap-5 rounded-[22px] border border-border bg-surface p-6 sm:grid-cols-2">
         <Field label="Wedding date">

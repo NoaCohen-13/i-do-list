@@ -1,7 +1,7 @@
 import { sql, eq, and, gte, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { guests, budgetItems, todos, calendarEvents } from "@/db/schema";
-import { requireWedding } from "@/lib/wedding";
+import { requireWedding, canEditWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { StatCard, Ring } from "@/components/StatCard";
 import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
@@ -18,6 +18,7 @@ function formatDate(d: string) {
 
 export default async function DashboardPage() {
   const wedding = await requireWedding();
+  const canEdit = await canEditWedding(wedding);
   const db = getDb();
 
   const [todoStats] = await db
@@ -182,9 +183,9 @@ export default async function DashboardPage() {
                 className="flex items-center gap-3.5 border-b border-border px-4.5 py-3.5 last:border-b-0"
               >
                 {t.kind === "todo" ? (
-                  <TodoCheckbox id={t.id} done={t.done} />
+                  <TodoCheckbox id={t.id} done={t.done} readOnly={!canEdit} />
                 ) : (
-                  <BudgetBookedCheckbox id={t.id} booked={t.done} />
+                  <BudgetBookedCheckbox id={t.id} booked={t.done} readOnly={!canEdit} />
                 )}
                 <div dir="auto" className="flex-1 font-bold">
                   {t.title}

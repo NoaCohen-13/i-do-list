@@ -1,7 +1,7 @@
 import { eq, and, gte, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { todos, budgetItems, calendarEvents } from "@/db/schema";
-import { requireWedding } from "@/lib/wedding";
+import { requireWedding, canEditWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { createTodo, deleteTodo, addCalendarEventAsTodo } from "@/app/(app)/actions";
 import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
@@ -10,6 +10,7 @@ import { tagColor } from "@/lib/tag-color";
 
 export default async function TodosPage() {
   const wedding = await requireWedding();
+  const canEdit = await canEditWedding(wedding);
   const db = getDb();
 
   const allTodos = await db.query.todos.findMany({
@@ -88,7 +89,7 @@ export default async function TodosPage() {
               </div>
               {event.addedAsTodoAt ? (
                 <span className="text-[0.78rem] font-bold text-text-muted">Added ✓</span>
-              ) : (
+              ) : canEdit ? (
                 <form action={addCalendarEventAsTodo.bind(null, event.id)}>
                   <button
                     type="submit"
@@ -97,7 +98,7 @@ export default async function TodosPage() {
                     Add as task
                   </button>
                 </form>
-              )}
+              ) : null}
             </div>
           ))}
         </div>
@@ -121,32 +122,34 @@ export default async function TodosPage() {
                 {item.itemName}
                 {item.vendorName && <span className="font-normal text-text-muted"> · {item.vendorName}</span>}
               </div>
-              <BudgetBookedCheckbox id={item.id} booked={item.booked} />
+              <BudgetBookedCheckbox id={item.id} booked={item.booked} readOnly={!canEdit} />
             </div>
           ))}
         </div>
       )}
 
-      <form
-        action={createTodo}
-        className="mb-7 flex flex-wrap items-end gap-3 rounded-[20px] border border-dashed border-border-strong bg-surface p-4.5"
-      >
-        <Field label="Task">
-          <input name="title" required className="input" placeholder="e.g. Book the florist" />
-        </Field>
-        <Field label="Phase">
-          <input name="phase" className="input" placeholder="e.g. 3 months before" />
-        </Field>
-        <Field label="Category">
-          <input name="category" className="input" placeholder="e.g. Vendors" />
-        </Field>
-        <Field label="Due date (for reminders)">
-          <input name="dueDate" type="date" className="input" />
-        </Field>
-        <button type="submit" className="btn-primary">
-          Add task
-        </button>
-      </form>
+      {canEdit && (
+        <form
+          action={createTodo}
+          className="mb-7 flex flex-wrap items-end gap-3 rounded-[20px] border border-dashed border-border-strong bg-surface p-4.5"
+        >
+          <Field label="Task">
+            <input name="title" required className="input" placeholder="e.g. Book the florist" />
+          </Field>
+          <Field label="Phase">
+            <input name="phase" className="input" placeholder="e.g. 3 months before" />
+          </Field>
+          <Field label="Category">
+            <input name="category" className="input" placeholder="e.g. Vendors" />
+          </Field>
+          <Field label="Due date (for reminders)">
+            <input name="dueDate" type="date" className="input" />
+          </Field>
+          <button type="submit" className="btn-primary">
+            Add task
+          </button>
+        </form>
+      )}
 
       {phases.size === 0 ? (
         <p className="rounded-[20px] border border-border bg-surface p-6 text-text-muted">
@@ -164,7 +167,7 @@ export default async function TodosPage() {
               </div>
               {items.map((t) => (
                 <div key={t.id} className="flex items-center gap-3 border-b border-border px-5 py-3.5 last:border-b-0">
-                  <TodoCheckbox id={t.id} done={t.done} />
+                  <TodoCheckbox id={t.id} done={t.done} readOnly={!canEdit} />
                   <div
                     dir="auto"
                     className={`flex-1 text-[0.92rem] font-semibold ${t.done ? "text-text-muted line-through" : ""}`}
@@ -179,11 +182,13 @@ export default async function TodosPage() {
                       {t.category}
                     </span>
                   )}
-                  <DeleteButton
-                    action={deleteTodo.bind(null, t.id)}
-                    confirmMessage={`Delete "${t.title}"? This can't be undone.`}
-                    label="Delete task"
-                  />
+                  {canEdit && (
+                    <DeleteButton
+                      action={deleteTodo.bind(null, t.id)}
+                      confirmMessage={`Delete "${t.title}"? This can't be undone.`}
+                      label="Delete task"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -204,9 +209,9 @@ export default async function TodosPage() {
                 {items.map((item) => (
                   <div key={item.id} className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0">
                     {item.kind === "todo" ? (
-                      <TodoCheckbox id={item.id} done={true} />
+                      <TodoCheckbox id={item.id} done={true} readOnly={!canEdit} />
                     ) : (
-                      <BudgetBookedCheckbox id={item.id} booked={true} />
+                      <BudgetBookedCheckbox id={item.id} booked={true} readOnly={!canEdit} />
                     )}
                     <div dir="auto" className="flex-1 text-[0.92rem] font-semibold text-text-muted line-through">
                       {item.title}

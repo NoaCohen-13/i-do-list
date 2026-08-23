@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "@/db";
-import { weddings } from "@/db/schema";
+import { weddings, accessRequests } from "@/db/schema";
 
 /**
  * Every authenticated route lives inside a Clerk organization (one org = one
@@ -26,4 +26,34 @@ export async function requireWedding() {
     .values({ clerkOrgId: orgId })
     .returning();
   return created;
+}
+
+/**
+ * Members who joined via Clerk's native org-invite (e.g. a partner) have no
+ * `accessRequests` row at all and default to full edit access. Only a row
+ * with an explicit "viewer" grant — created by our own request/approve flow
+ * — restricts someone to read-only.
+ */
+export async function canEditWedding(wedding: { id: string }) {
+  const { orgRole, userId } = await auth();
+  if (orgRole === "org:admin") return true;
+  if (!userId) return false;
+
+  const db = getDb();
+  const record = await db.query.accessRequests.findFirst({
+    where: and(
+      eq(accessRequests.weddingId, wedding.id),
+      eq(accessRequests.requesterUserId, userId),
+      eq(accessRequests.status, "approved")
+    ),
+  });
+  return record?.role !== "viewer";
+}
+
+export async function requireEditWedding() {
+  const wedding = await requireWedding();
+  if (!(await canEditWedding(wedding))) {
+    throw new Error("You have view-only access to this wedding.");
+  }
+  return wedding;
 }

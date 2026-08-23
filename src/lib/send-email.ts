@@ -39,3 +39,19 @@ export async function sendReminderEmail(to: string[], subject: string, bodyHtml:
   }
   return { failed };
 }
+
+export async function sendAccessRequestEmail(
+  to: string[],
+  requesterName: string,
+  requesterEmail: string,
+  weddingLabel: string,
+  reviewUrl: string
+) {
+  const subject = `${requesterName || requesterEmail} wants to view ${weddingLabel}`;
+  const bodyHtml = `
+    <p><strong>${requesterName || requesterEmail}</strong> (${requesterEmail}) requested access to view
+    ${weddingLabel} on I Do List.</p>
+    <p><a href="${reviewUrl}">Review this request</a></p>
+  `;
+  return sendReminderEmail(to, subject, bodyHtml);
+}
