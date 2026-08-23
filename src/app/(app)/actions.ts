@@ -22,6 +22,25 @@ export async function toggleTodo(id: string, done: boolean) {
   revalidatePath("/todos");
 }
 
+export async function reorderUpNext(items: { id: string; kind: "todo" | "vendor" }[]) {
+  const wedding = await requireEditWedding();
+  const db = getDb();
+  await Promise.all(
+    items.map((item, index) =>
+      item.kind === "todo"
+        ? db
+            .update(todos)
+            .set({ sortOrder: index })
+            .where(and(eq(todos.id, item.id), eq(todos.weddingId, wedding.id)))
+        : db
+            .update(budgetItems)
+            .set({ sortOrder: index })
+            .where(and(eq(budgetItems.id, item.id), eq(budgetItems.weddingId, wedding.id)))
+    )
+  );
+  revalidatePath("/");
+}
+
 export async function createTodo(formData: FormData) {
   const wedding = await requireEditWedding();
   const db = getDb();

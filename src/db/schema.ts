@@ -91,6 +91,7 @@ export const budgetItems = pgTable(
     notes: text("notes"),
     source: recordSourceEnum("source").notNull().default("manual"),
     externalRowKey: text("external_row_key"),
+    sortOrder: integer("sort_order"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -112,6 +113,7 @@ export const todos = pgTable("todos", {
   dueDate: date("due_date"),
   reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
   finalReminderSentAt: timestamp("final_reminder_sent_at", { withTimezone: true }),
+  sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

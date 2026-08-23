@@ -4,8 +4,7 @@ import { guests, budgetItems, todos, calendarEvents } from "@/db/schema";
 import { requireWedding, canEditWedding } from "@/lib/wedding";
 import { AppShell } from "@/components/AppShell";
 import { StatCard, Ring } from "@/components/StatCard";
-import { TodoCheckbox, BudgetBookedCheckbox } from "@/components/TodoCheckbox";
-import { tagColor } from "@/lib/tag-color";
+import { UpNextList } from "@/components/UpNextList";
 
 function formatDate(d: string) {
   return new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
@@ -58,18 +57,20 @@ export default async function DashboardPage() {
 
   const upNextTodos = await db.query.todos.findMany({
     where: and(eq(todos.weddingId, wedding.id), eq(todos.done, false)),
-    orderBy: (t, { asc }) => [asc(t.dueDate), asc(t.createdAt)],
+    orderBy: (t, { asc }) => [asc(t.sortOrder), asc(t.dueDate), asc(t.createdAt)],
     limit: 5,
   });
   const upNextVendors = await db.query.budgetItems.findMany({
     where: and(eq(budgetItems.weddingId, wedding.id), eq(budgetItems.booked, false)),
-    orderBy: (b, { asc }) => [asc(b.category)],
+    orderBy: (b, { asc }) => [asc(b.sortOrder), asc(b.category)],
     limit: 5,
   });
   const upNext = [
-    ...upNextTodos.map((t) => ({ kind: "todo" as const, id: t.id, title: t.title, tag: t.category, done: t.done })),
-    ...upNextVendors.map((v) => ({ kind: "vendor" as const, id: v.id, title: v.itemName, tag: v.category, done: v.booked })),
-  ].slice(0, 5);
+    ...upNextTodos.map((t) => ({ kind: "todo" as const, id: t.id, title: t.title, tag: t.category, done: t.done, sortOrder: t.sortOrder })),
+    ...upNextVendors.map((v) => ({ kind: "vendor" as const, id: v.id, title: v.itemName, tag: v.category, done: v.booked, sortOrder: v.sortOrder })),
+  ]
+    .sort((a, b) => (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity))
+    .slice(0, 5);
 
   const upcomingEvents = await db.query.calendarEvents.findMany({
     where: and(eq(calendarEvents.weddingId, wedding.id), gte(calendarEvents.startAt, new Date())),
@@ -172,35 +173,10 @@ export default async function DashboardPage() {
       <section className="mt-9">
         <h2 className="mb-3.5 text-xl">Up next</h2>
         <div className="overflow-hidden rounded-[22px] border border-border bg-surface">
-          {upNext.length === 0 ? (
-            <p className="p-6 text-text-muted">
-              No open tasks yet — add some on the To-Dos page.
-            </p>
-          ) : (
-            upNext.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center gap-3.5 border-b border-border px-4.5 py-3.5 last:border-b-0"
-              >
-                {t.kind === "todo" ? (
-                  <TodoCheckbox id={t.id} done={t.done} readOnly={!canEdit} />
-                ) : (
-                  <BudgetBookedCheckbox id={t.id} booked={t.done} readOnly={!canEdit} />
-                )}
-                <div dir="auto" className="flex-1 font-bold">
-                  {t.title}
-                </div>
-                {t.tag && (
-                  <span
-                    dir="auto"
-                    className={`rounded-full px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wide ${tagColor(t.tag)}`}
-                  >
-                    {t.tag}
-                  </span>
-                )}
-              </div>
-            ))
-          )}
+          <UpNextList
+            items={upNext.map((t) => ({ kind: t.kind, id: t.id, title: t.title, tag: t.tag, done: t.done }))}
+            canEdit={canEdit}
+          />
         </div>
       </section>
     </AppShell>
